@@ -1,105 +1,89 @@
 // src/screens/RoleSelectionScreen.tsx
 import React from 'react';
 import {
-  SafeAreaView,
   View,
   Text,
-  Pressable,
   StyleSheet,
-  Platform
+  Platform,
+  StatusBar,
+  Image,
+  TouchableOpacity
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
-import { useAppTheme } from '../context/ThemeContext';
-import { Spacing, BorderRadius, FontSizes } from '../theme';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'RoleSelection'>;
+const GRADIENT_COLORS: [string, string] = ['#F7B7C3', '#B6A4F7'];
 
-export default function RoleSelectionScreen({ navigation }: Props) {
-  const { colors } = useAppTheme();
-
+export default function RoleSelectionScreen({ navigation }: NativeStackScreenProps<RootStackParamList, 'RoleSelection'>) {
   const onChoose = (role: 'student' | 'teacher') =>
     navigation.replace('LanguageSelection', { role });
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <Text style={[styles.logo, { color: colors.primary }]}>Lingro</Text>
-      <Text style={[styles.title, { color: colors.text }]}>Кто вы?</Text>
-      <View style={styles.buttonsWrapper}>
-        <Pressable
-          android_ripple={{ color: '#0002' }}
-          style={({ pressed }) => [
-            styles.button,
-            { backgroundColor: colors.accent },
-            pressed && styles.pressed
-          ]}
-          onPress={() => onChoose('teacher')}
-        >
-          <Text style={styles.buttonText}>Преподаватель</Text>
-        </Pressable>
-
-        <Pressable
-          android_ripple={{ color: '#0002' }}
-          style={({ pressed }) => [
-            styles.button,
-            { backgroundColor: colors.primary },
-            pressed && styles.pressed
-          ]}
-          onPress={() => onChoose('student')}
-        >
-          <Text style={styles.buttonText}>Ученик</Text>
-        </Pressable>
+    <LinearGradient colors={GRADIENT_COLORS} style={styles.gradient}>
+      <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
+      <View style={styles.container}>
+        <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
+        <Text style={styles.title}>Кто вы?</Text>
+        <View style={styles.buttonsWrapper}>
+          <TouchableOpacity style={styles.button} onPress={() => onChoose('teacher')}>
+            <Text style={styles.buttonText}>Преподаватель</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.button, { backgroundColor: '#F7B7C3' }]} onPress={() => onChoose('student')}>
+            <Text style={styles.buttonText}>Ученик</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  gradient: {
+    flex: 1
+  },
   container: {
     flex: 1,
-    padding: Spacing.md,
     justifyContent: 'center',
-    backgroundColor: '#fff'
+    alignItems: 'center',
+    paddingHorizontal: 24
   },
   logo: {
-    fontSize: FontSizes.xl * 1.5,
-    fontWeight: '800',
-    textAlign: 'center',
-    marginBottom: Spacing.lg,
-    ...Platform.select({
-      ios:   { fontFamily: 'AvenirNext-Heavy' },
-      android: { fontFamily: 'sans-serif-black' }
-    })
+    width: 120,
+    height: 120,
+    marginBottom: 0
   },
   title: {
-    fontSize: FontSizes.xl,
+    fontSize: 24,
     fontWeight: '700',
+    color: '#fff',
+    marginBottom: 16,
     textAlign: 'center',
-    marginBottom: Spacing.xl
+    letterSpacing: 0.2
   },
   buttonsWrapper: {
-    width: '80%',
-    alignSelf: 'center',
-    gap: Spacing.md // RN 0.71+ supports gap
+    width: '100%',
+    alignItems: 'center',
+    gap: 20
   },
   button: {
-    paddingVertical: Spacing.lg,
-    borderRadius: BorderRadius.md,
+    width: 240,
+    height: 48,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 4
-  },
-  pressed: {
-    transform: [{ scale: 0.98 }],
-    opacity: 0.8
+    backgroundColor: '#B6A4F7',
+    shadowColor: '#B6A4F7',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 2,
+    marginBottom: 0
   },
   buttonText: {
     color: '#fff',
-    fontSize: FontSizes.md,
-    fontWeight: '600'
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: 0.5
   }
 });

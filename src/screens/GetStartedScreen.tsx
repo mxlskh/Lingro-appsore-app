@@ -43,13 +43,13 @@ const styles = StyleSheet.create({
   logo: {
     width: 120,
     height: 120,
-    marginBottom: 24
+    marginBottom: 0
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
     color: '#fff',
-    marginBottom: 40,
+    marginBottom: 16,
     textAlign: 'center',
     letterSpacing: 0.2
   },

@@ -57,11 +57,7 @@ function MainNavigator() {
         <Stack.Screen
           name="SignUp"
           component={SignUpScreen}
-          options={{
-            title: 'Регистрация',
-            headerStyle: { backgroundColor: colors.card },
-            headerTitleStyle: { color: colors.text },
-          }}
+          options={{ headerShown: false }}
         />
 
         {/* ------------------- GetStarted ------------------- */}

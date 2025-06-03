@@ -1,17 +1,18 @@
 // src/screens/LanguageSelectionScreen.tsx
 import React from 'react';
 import {
-  SafeAreaView,
+  View,
   Text,
   TouchableOpacity,
   StyleSheet,
   FlatList,
-  Platform
+  Platform,
+  StatusBar,
+  Image
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
-import { useAppTheme } from '../context/ThemeContext';
-import { Spacing, BorderRadius, FontSizes } from '../theme';
 
 const LANGUAGES = [
   { code: 'en', label: '🇺🇸/🇬🇧 Английский' },
@@ -26,79 +27,84 @@ const LANGUAGES = [
   { code: 'it', label: '🇮🇹 Итальянский' }
 ];
 
-type Props = NativeStackScreenProps<RootStackParamList, 'LanguageSelection'>;
+const GRADIENT_COLORS: [string, string] = ['#F7B7C3', '#B6A4F7'];
 
-export default function LanguageSelectionScreen({
-  route,
-  navigation
-}: Props) {
-  const { colors } = useAppTheme();
+export default function LanguageSelectionScreen({ route, navigation }: NativeStackScreenProps<RootStackParamList, 'LanguageSelection'>) {
   const { role } = route.params;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Заголовок приложения */}
-      <Text style={[styles.logo, { color: colors.primary }]}>Lingro</Text>
-      {/* Заголовок экрана */}
-      <Text style={[styles.title, { color: colors.text }]}>Выберите язык</Text>
-
-      <FlatList
-        data={LANGUAGES}
-        keyExtractor={item => item.code}
-        numColumns={2}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={[
-              styles.card,
-              { backgroundColor: colors.card, borderColor: colors.border }
-            ]}
-            onPress={() =>
-              navigation.replace('Chat', { role, language: item.code })
-            }
-          >
-            <Text style={[styles.cardText, { color: colors.text }]}>
-              {item.label}
-            </Text>
-          </TouchableOpacity>
-        )}
-        columnWrapperStyle={{ justifyContent: 'space-between' }}
-        contentContainerStyle={{ paddingBottom: Spacing.lg }}
-      />
-    </SafeAreaView>
+    <LinearGradient colors={GRADIENT_COLORS} style={styles.gradient}>
+      <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
+      <View style={styles.container}>
+        <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
+        <Text style={styles.title}>Выберите язык</Text>
+        <FlatList
+          data={LANGUAGES}
+          keyExtractor={item => item.code}
+          numColumns={2}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.card}
+              onPress={() => navigation.replace('Chat', { role, language: item.code })}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.cardText}>{item.label}</Text>
+            </TouchableOpacity>
+          )}
+          columnWrapperStyle={{ justifyContent: 'space-between', columnGap: 16 }}
+          contentContainerStyle={styles.cardsContainer}
+          showsVerticalScrollIndicator={false}
+        />
+      </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  gradient: {
+    flex: 1
+  },
   container: {
     flex: 1,
-    padding: Spacing.md
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 0
   },
   logo: {
-    fontSize: FontSizes.xl * 1.5,
-    fontWeight: '800',
-    textAlign: 'center',
-    marginBottom: Spacing.lg,
-    ...Platform.select({
-      ios: { fontFamily: 'AvenirNext-Heavy' },
-      android: { fontFamily: 'sans-serif-black' }
-    })
+    width: 100,
+    height: 100,
+    marginBottom: 0
   },
   title: {
-    fontSize: FontSizes.xl,
+    fontSize: 24,
     fontWeight: '700',
+    color: '#fff',
+    marginBottom: 16,
     textAlign: 'center',
-    marginBottom: Spacing.lg
+    letterSpacing: 0.2
+  },
+  cardsContainer: {
+    paddingBottom: 0
   },
   card: {
-    width: '48%',
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    marginBottom: Spacing.sm,
+    width: 150,
+    height: 60,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    marginBottom: 16,
     alignItems: 'center',
-    borderWidth: 1
+    justifyContent: 'center',
+    shadowColor: '#B6A4F7',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.10,
+    shadowRadius: 8,
+    elevation: 2
   },
   cardText: {
-    fontSize: FontSizes.md,
-    fontWeight: '500'
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#B6A4F7',
+    textAlign: 'center'
   }
 });

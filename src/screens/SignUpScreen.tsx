@@ -81,8 +81,8 @@ const styles = StyleSheet.create({
     fontSize: 48,
     fontWeight: '800',
     color: '#fff',
-    marginBottom: 12,
-    marginTop: 32,
+    marginBottom: 0,
+    marginTop: 0,
     letterSpacing: 1.5,
     ...Platform.select({
       ios: { fontFamily: 'AvenirNext-Heavy' },
@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '600',
     color: '#fff',
-    marginBottom: 32,
+    marginBottom: 16,
     textAlign: 'center'
   },
   form: {
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 8,
     elevation: 2,
-    marginTop: 8
+    marginTop: 0
   },
   buttonText: {
     color: '#fff',
