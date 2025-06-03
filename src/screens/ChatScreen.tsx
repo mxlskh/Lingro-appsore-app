@@ -21,6 +21,8 @@ import {
   Text,
   LogBox,
   Linking,
+  ActivityIndicator,
+  Image,
 } from 'react-native';
 import { GiftedChat, Bubble, IMessage } from 'react-native-gifted-chat';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -45,6 +47,8 @@ type Message = IMessage & {
     name: string;
     url: string;
     type: string;
+    status?: 'uploading' | 'done' | 'error';
+    correctedUrl?: string; // для исправленного файла
   };
 };
 
@@ -585,6 +589,20 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
       const fileUri = asset.uri;
       const fileName = asset.name;
       const fileType = asset.mimeType || 'application/octet-stream';
+      // Показываем bubble "Загрузка файла..."
+      const tempId = Date.now();
+      setMessages((prev) => GiftedChat.append(prev, [{
+        _id: tempId,
+        createdAt: new Date(),
+        user: { _id: 1, name: 'Вы' },
+        text: '',
+        file: {
+          name: fileName,
+          url: fileUri,
+          type: fileType,
+          status: 'uploading' as 'uploading',
+        },
+      }]));
       // Отправка файла на backend
       const formData = new FormData();
       formData.append('file', {
@@ -592,7 +610,6 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
         name: fileName,
         type: fileType,
       } as any);
-      // Можно добавить дополнительные поля, если нужно
       const response = await fetch('https://openai-proxy-production-8dae.up.railway.app/api/file', {
         method: 'POST',
         body: formData,
@@ -601,8 +618,9 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
         },
       });
       const data = await response.json();
-      // data: { url, text, fileName, fileType, ... }
-      // Добавляем сообщение в чат
+      // Удаляем bubble "Загрузка..." и добавляем результат
+      setMessages((prev) => prev.filter((m) => m._id !== tempId));
+      // Основной файл
       const fileMsg = {
         _id: Date.now(),
         createdAt: new Date(),
@@ -612,20 +630,42 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
           name: data.fileName || fileName,
           url: data.url,
           type: data.fileType || fileType,
+          status: 'done' as 'done',
+          correctedUrl: data.correctedUrl,
         },
       };
       setMessages((prev) => GiftedChat.append(prev, [fileMsg]));
-      // Если есть текстовый ответ от GPT — добавить его
-      if (data.text) {
+      // Исправленный файл от GPT
+      if (data.correctedUrl) {
         setMessages((prev) => GiftedChat.append(prev, [{
           _id: Date.now() + 1,
+          createdAt: new Date(),
+          user: { _id: 2, name: 'Lingro' },
+          text: '',
+          file: {
+            name: 'Исправленный файл',
+            url: data.correctedUrl,
+            type: data.fileType || fileType,
+            status: 'done' as 'done',
+          },
+        }]));
+      }
+      // Текстовый ответ от GPT
+      if (data.text) {
+        setMessages((prev) => GiftedChat.append(prev, [{
+          _id: Date.now() + 2,
           createdAt: new Date(),
           user: { _id: 2, name: 'Lingro' },
           text: data.text,
         }]));
       }
     } catch (e) {
-      alert('Ошибка при отправке файла');
+      setMessages((prev) => GiftedChat.append(prev, [{
+        _id: Date.now(),
+        createdAt: new Date(),
+        user: { _id: 1, name: 'Вы' },
+        text: 'Ошибка при отправке файла',
+      }]));
     }
   };
 
@@ -694,14 +734,43 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
     }
 
     // Если это файловое сообщение (file есть) — рендерим иконку и название файла
+    if (currentMessage.file?.status === 'uploading') {
+      return (
+        <View style={{ backgroundColor: '#fff', borderRadius: 20, margin: 8, padding: 16, shadowColor: '#B6A4F7', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.10, shadowRadius: 8, elevation: 2, maxWidth: '75%', alignItems: 'center' }}>
+          <ActivityIndicator size="small" color="#B6A4F7" style={{ marginBottom: 8 }} />
+          <Text style={{ color: '#B6A4F7', fontSize: 15 }}>Загрузка файла...</Text>
+        </View>
+      );
+    }
+    if (currentMessage.file?.type?.startsWith('image/')) {
+      return (
+        <View style={{ backgroundColor: '#fff', borderRadius: 20, margin: 8, padding: 8, shadowColor: '#B6A4F7', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.10, shadowRadius: 8, elevation: 2, maxWidth: '75%', alignItems: 'center' }}>
+          <Image source={{ uri: currentMessage.file.url }} style={{ width: 180, height: 120, borderRadius: 14, marginBottom: 8 }} resizeMode="cover" />
+          <Text style={{ color: '#222', fontSize: 15, marginBottom: 4 }}>{currentMessage.file.name}</Text>
+          <TouchableOpacity onPress={() => currentMessage.file?.url && Linking.openURL(String(currentMessage.file.url))}>
+            <Text style={{ color: '#6A0DAD', fontSize: 15, textDecorationLine: 'underline' }}>Открыть изображение</Text>
+          </TouchableOpacity>
+          {currentMessage.file?.correctedUrl && (
+            <TouchableOpacity onPress={() => Linking.openURL(String(currentMessage.file?.correctedUrl))} style={{ marginTop: 8 }}>
+              <Text style={{ color: '#B6A4F7', fontSize: 15, textDecorationLine: 'underline' }}>Исправленное изображение</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      );
+    }
     if (currentMessage.file?.url && currentMessage.file?.name) {
       return (
         <View style={{ backgroundColor: '#fff', borderRadius: 20, margin: 8, padding: 16, shadowColor: '#B6A4F7', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.10, shadowRadius: 8, elevation: 2, maxWidth: '75%' }}>
           <Ionicons name="document-outline" size={28} color="#B6A4F7" style={{ marginBottom: 8 }} />
           <Text style={{ color: '#222', fontSize: 16, marginBottom: 4 }}>{currentMessage.file?.name}</Text>
-          <TouchableOpacity onPress={() => currentMessage.file?.url && Linking.openURL(String(currentMessage.file.url))}>
+          <TouchableOpacity onPress={() => currentMessage.file?.url && Linking.openURL(String(currentMessage.file?.url))}>
             <Text style={{ color: '#6A0DAD', fontSize: 15, textDecorationLine: 'underline' }}>Открыть файл</Text>
           </TouchableOpacity>
+          {currentMessage.file?.correctedUrl && (
+            <TouchableOpacity onPress={() => Linking.openURL(String(currentMessage.file?.correctedUrl))} style={{ marginTop: 8 }}>
+              <Text style={{ color: '#B6A4F7', fontSize: 15, textDecorationLine: 'underline' }}>Исправленный файл</Text>
+            </TouchableOpacity>
+          )}
         </View>
       );
     }

@@ -38,6 +38,11 @@ export default {
       PROXY_URL:         process.env.PROXY_URL,
       MODEL_GPT4:        process.env.MODEL_GPT4,
       MODEL_FALLBACK:    process.env.MODEL_FALLBACK,
+      server: {
+        url: process.env.NODE_ENV === 'production'
+          ? process.env.BACKEND_URL_PROD
+          : process.env.BACKEND_URL_DEV
+      }
     }
   }
 };
