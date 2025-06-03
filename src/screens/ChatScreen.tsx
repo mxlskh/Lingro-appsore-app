@@ -6,6 +6,7 @@ import React, {
   useRef,
   useCallback,
   useLayoutEffect,
+  useMemo,
 } from 'react';
 import {
   View,
@@ -19,6 +20,7 @@ import {
   Animated,
   Text,
   LogBox,
+  Linking,
 } from 'react-native';
 import { GiftedChat, Bubble, IMessage } from 'react-native-gifted-chat';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -29,6 +31,7 @@ import { useAppTheme } from '../context/ThemeContext';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as DocumentPicker from 'expo-document-picker';
 
 // Определяем пропсы навигатора для ChatScreen
 type ChatProps = NativeStackScreenProps<RootStackParamList, 'Chat'>;
@@ -38,6 +41,11 @@ type Message = IMessage & {
   audioUri?: string;
   audioDuration?: string;
   waveform?: number[];
+  file?: {
+    name: string;
+    url: string;
+    type: string;
+  };
 };
 
 const {
@@ -109,27 +117,21 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
   // Состояние для URI проигрываемого аудио (кнопка ▶/⏸)
   const [playingUri, setPlayingUri] = useState<string | null>(null);
 
-  // ==== Вставляем кнопку «шестерёнка» в header ====
+  // Мемоизированный headerRight
+  const HeaderSettingsButton = useMemo(() => (
+    <TouchableOpacity
+      style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginRight: 16 }}
+      onPress={() => navigation.navigate('Settings', { role, language })}
+    >
+      <Ionicons name="settings-outline" size={24} color={colors.text} />
+    </TouchableOpacity>
+  ), [navigation, colors.text, role, language]);
+
   useLayoutEffect(() => {
     navigation.setOptions({
-      headerRight: () => (
-        <TouchableOpacity
-          style={styles.headerButton}
-          onPress={() =>
-            // При переходе в Settings передаём role и language
-            navigation.navigate('Settings', { role, language })
-          }
-        >
-          <Ionicons name="settings-outline" size={24} color={colors.text} />
-        </TouchableOpacity>
-      ),
-      // Если хотите, можно переопределить заголовок:
-      // headerTitleAlign: 'center',
-      // headerStyle: { backgroundColor: colors.background },
-      // headerTintColor: colors.text,
+      headerRight: () => HeaderSettingsButton,
     });
-  }, [navigation, colors.text, role, language]);
-  // ================================================
+  }, [navigation, HeaderSettingsButton]);
 
   // === При монтировании: сразу добавляем приветственное сообщение Lingro ===
   useEffect(() => {
@@ -570,6 +572,63 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
     setMessages((prev) => GiftedChat.append(prev, [imgMsg]));
   };
 
+  // ==== Выбор любого файла и отправка как сообщение ====
+  const onPickDocument = async () => {
+    try {
+      const res = await DocumentPicker.getDocumentAsync({
+        copyToCacheDirectory: true,
+        multiple: false,
+        type: '*/*',
+      });
+      if (!res.assets || res.assets.length === 0) return;
+      const asset = res.assets[0];
+      const fileUri = asset.uri;
+      const fileName = asset.name;
+      const fileType = asset.mimeType || 'application/octet-stream';
+      // Отправка файла на backend
+      const formData = new FormData();
+      formData.append('file', {
+        uri: fileUri,
+        name: fileName,
+        type: fileType,
+      } as any);
+      // Можно добавить дополнительные поля, если нужно
+      const response = await fetch('https://openai-proxy-production-8dae.up.railway.app/api/file', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      const data = await response.json();
+      // data: { url, text, fileName, fileType, ... }
+      // Добавляем сообщение в чат
+      const fileMsg = {
+        _id: Date.now(),
+        createdAt: new Date(),
+        user: { _id: 1, name: 'Вы' },
+        text: '',
+        file: {
+          name: data.fileName || fileName,
+          url: data.url,
+          type: data.fileType || fileType,
+        },
+      };
+      setMessages((prev) => GiftedChat.append(prev, [fileMsg]));
+      // Если есть текстовый ответ от GPT — добавить его
+      if (data.text) {
+        setMessages((prev) => GiftedChat.append(prev, [{
+          _id: Date.now() + 1,
+          createdAt: new Date(),
+          user: { _id: 2, name: 'Lingro' },
+          text: data.text,
+        }]));
+      }
+    } catch (e) {
+      alert('Ошибка при отправке файла');
+    }
+  };
+
   // ==== Рендер одного «пузырька» сообщения (Bubble) ====
   const renderBubble = (props: any) => {
     const currentMessage = props.currentMessage as Message;
@@ -634,23 +693,35 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
       );
     }
 
-    // Обычный текстовый Bubble
+    // Если это файловое сообщение (file есть) — рендерим иконку и название файла
+    if (currentMessage.file?.url && currentMessage.file?.name) {
+      return (
+        <View style={{ backgroundColor: '#fff', borderRadius: 20, margin: 8, padding: 16, shadowColor: '#B6A4F7', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.10, shadowRadius: 8, elevation: 2, maxWidth: '75%' }}>
+          <Ionicons name="document-outline" size={28} color="#B6A4F7" style={{ marginBottom: 8 }} />
+          <Text style={{ color: '#222', fontSize: 16, marginBottom: 4 }}>{currentMessage.file?.name}</Text>
+          <TouchableOpacity onPress={() => currentMessage.file?.url && Linking.openURL(String(currentMessage.file.url))}>
+            <Text style={{ color: '#6A0DAD', fontSize: 15, textDecorationLine: 'underline' }}>Открыть файл</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    // Одинаковый стиль для всех bubble
     return (
-      <Bubble
-        {...props}
-        wrapperStyle={{
-          left: {
-            backgroundColor: '#f0f0f0',
-            borderColor: '#ccc',
-            borderWidth: 1,
-          },
-          right: { backgroundColor: colors.primary },
-        }}
-        textStyle={{
-          left: { color: colors.text },
-          right: { color: '#fff' },
-        }}
-      />
+      <View style={{
+        backgroundColor: '#fff',
+        borderRadius: 20,
+        marginVertical: 6,
+        marginHorizontal: 8,
+        maxWidth: '75%',
+        shadowColor: '#B6A4F7',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.10,
+        shadowRadius: 8,
+        elevation: 2
+      }}>
+        <Text style={{ color: '#222', fontSize: 17, padding: 16 }}>{currentMessage.text}</Text>
+      </View>
     );
   };
 
@@ -658,7 +729,7 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
     >
       <LinearGradient colors={GRADIENT_COLORS} style={{ flex: 1 }}>
         <GiftedChat
@@ -679,6 +750,9 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
                   size={24}
                   color={colors.primary}
                 />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={onPickDocument} style={{ marginHorizontal: 8 }}>
+                <Ionicons name="document-outline" size={24} color={colors.primary} />
               </TouchableOpacity>
               <TextInput
                 style={[

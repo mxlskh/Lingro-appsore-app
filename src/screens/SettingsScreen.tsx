@@ -68,10 +68,10 @@ const styles = StyleSheet.create({
     marginTop: 0
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 26,
+    fontWeight: '800',
     color: '#fff',
-    marginBottom: 0,
+    marginBottom: 32,
     marginTop: 0,
     textAlign: 'center',
     letterSpacing: 0.2
@@ -80,8 +80,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    width: 240,
-    marginBottom: 8,
+    width: 210,
+    marginBottom: 18,
     marginTop: 0
   },
   label: {
@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
     fontWeight: '600'
   },
   button: {
-    width: 240,
+    width: 210,
     height: 48,
     borderRadius: 16,
     alignItems: 'center',
@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 8,
     elevation: 2,
-    marginBottom: 8,
+    marginBottom: 18,
     marginTop: 0
   },
   buttonText: {
