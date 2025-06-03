@@ -1,10 +1,9 @@
 // App.tsx
 
 import React from 'react';
-import { SafeAreaView, TouchableOpacity } from 'react-native';
+import { SafeAreaView, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import Ionicons from '@expo/vector-icons/Ionicons';
 
 import SplashScreen from './src/screens/SplashScreen';
 import SignInScreen from './src/screens/SignInScreen';
@@ -18,7 +17,7 @@ import SettingsScreen from './src/screens/SettingsScreen';
 import { LightNavTheme, DarkNavTheme } from './src/theme';
 import { ThemeProvider, useAppTheme } from './src/context/ThemeContext';
 
-// Навигатор и его параметры
+// 1) Типизация всех экранов и их параметров:
 export type RootStackParamList = {
   Splash: undefined;
   SignIn: undefined;
@@ -33,74 +32,87 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function MainNavigator() {
+  // Получаем текущую тему
   const { isDark, colors } = useAppTheme();
   const navTheme = isDark ? DarkNavTheme : LightNavTheme;
 
   return (
     <NavigationContainer theme={navTheme}>
       <Stack.Navigator initialRouteName="Splash">
+        {/* ------------------- Splash ------------------- */}
         <Stack.Screen
           name="Splash"
           component={SplashScreen}
           options={{ headerShown: false }}
         />
 
+        {/* ------------------- SignIn ------------------- */}
         <Stack.Screen
           name="SignIn"
           component={SignInScreen}
           options={{
             title: 'Войти',
             headerStyle: { backgroundColor: colors.card },
-            headerTitleStyle: { color: colors.text }
+            headerTitleStyle: { color: colors.text },
           }}
         />
 
+        {/* ------------------- SignUp ------------------- */}
         <Stack.Screen
           name="SignUp"
           component={SignUpScreen}
           options={{
             title: 'Регистрация',
             headerStyle: { backgroundColor: colors.card },
-            headerTitleStyle: { color: colors.text }
+            headerTitleStyle: { color: colors.text },
           }}
         />
 
+        {/* ------------------- GetStarted ------------------- */}
         <Stack.Screen
           name="GetStarted"
           component={GetStartedScreen}
           options={{ headerShown: false }}
         />
 
+        {/* ------------------- RoleSelection ------------------- */}
         <Stack.Screen
           name="RoleSelection"
           component={RoleSelectionScreen}
           options={{ headerShown: false }}
         />
 
+        {/* ------------------- LanguageSelection ------------------- */}
         <Stack.Screen
           name="LanguageSelection"
           component={LanguageSelectionScreen}
           options={{
             headerShown: false,
-            title: 'Выберите язык'
+            title: 'Выберите язык',
           }}
         />
 
+        {/* ------------------- Chat ------------------- */}
         <Stack.Screen
           name="Chat"
           component={ChatScreen}
           options={{
-            headerShown: false // Временно убираем шапку, чтобы проверить тулбар
+            // Включаем шапку, чтобы отобразить headerRight с иконкой «шестерёнки»
+            headerShown: true,
+            title: 'Чат',
+            headerStyle: { backgroundColor: colors.card },
+            headerTitleStyle: { color: colors.text },
           }}
         />
 
+        {/* ------------------- Settings ------------------- */}
         <Stack.Screen
           name="Settings"
           component={SettingsScreen}
           options={{
             title: 'Настройки',
             headerStyle: { backgroundColor: colors.card },
-            headerTitleStyle: { color: colors.text }
+            headerTitleStyle: { color: colors.text },
           }}
         />
       </Stack.Navigator>
@@ -108,12 +120,26 @@ function MainNavigator() {
   );
 }
 
+// Чтобы top/bottom SafeArea были окрашены под тему, оборачиваем MainNavigator
+function AppWrapper() {
+  const { colors } = useAppTheme();
+  return (
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      <MainNavigator />
+    </SafeAreaView>
+  );
+}
+
 export default function App() {
   return (
     <ThemeProvider>
-      <SafeAreaView style={{ flex: 1 }}>
-        <MainNavigator />
-      </SafeAreaView>
+      <AppWrapper />
     </ThemeProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
+});
