@@ -36,6 +36,7 @@ type ChatProps = NativeStackScreenProps<RootStackParamList, 'Chat'>;
 type Message = IMessage & {
   audioUri?: string;
   audioDuration?: string;
+  waveform?: number[];
 };
 
 const {
@@ -47,6 +48,29 @@ const {
 
 // Подавляем предупреждение о deprecated expo-av
 LogBox.ignoreLogs(['[expo-av]: Expo AV has been deprecated']);
+
+// === Опции для записи аудио (iOS/Android) ===
+const RECORDING_OPTIONS = {
+  android: {
+    extension: '.m4a',
+    outputFormat: 2, // MPEG_4
+    audioEncoder: 3, // AAC
+    sampleRate: 44100,
+    numberOfChannels: 2,
+    bitRate: 128000,
+  },
+  ios: {
+    extension: '.m4a',
+    audioQuality: 2, // HIGH
+    sampleRate: 44100,
+    numberOfChannels: 2,
+    bitRate: 128000,
+    linearPCMBitDepth: 16,
+    linearPCMIsBigEndian: false,
+    linearPCMIsFloat: false,
+  },
+  web: {},
+};
 
 export default function ChatScreen({ navigation, route }: ChatProps) {
   const { colors } = useAppTheme();
@@ -63,6 +87,7 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
   const [recordingActive, setRecordingActive] = useState(false);
   const [recordingCanceled, setRecordingCanceled] = useState(false);
   const [recordingSent, setRecordingSent] = useState(false);
+  const [showCancelUI, setShowCancelUI] = useState(false);
 
   const [recordingDuration, setRecordingDuration] = useState<string>('0:00');
   const recordingStartTime = useRef<number | null>(null);
@@ -80,9 +105,6 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
 
   // Состояние для URI проигрываемого аудио (кнопка ▶/⏸)
   const [playingUri, setPlayingUri] = useState<string | null>(null);
-
-  // Анимация для кнопки микрофона
-  const scaleAnim = useRef(new Animated.Value(1)).current;
 
   // ==== Вставляем кнопку «шестерёнка» в header ====
   useLayoutEffect(() => {
@@ -126,28 +148,23 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
   // ==== PanResponder для записи голосового сообщения ====
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-
+      onStartShouldSetPanResponder: () => {
+        return true;
+      },
+      onMoveShouldSetPanResponder: () => {
+        return true;
+      },
       onPanResponderGrant: () => {
-        // Когда палец касается кнопки: сбрасываем флаги и запускаем запись
         recordingCanceledRef.current = false;
         recordingSentRef.current = false;
         setRecordingCanceled(false);
         setRecordingSent(false);
-
+        setShowCancelUI(false);
         recordingActiveRef.current = true;
         setRecordingActive(true);
-
-        Animated.spring(scaleAnim, {
-          toValue: 1.4,
-          useNativeDriver: true,
-        }).start();
         startRecording();
       },
-
       onPanResponderMove: (_, gestureState) => {
-        // Если свайп влево более чем на 50px → отменяем
         if (
           gestureState.dx < -50 &&
           recordingActiveRef.current &&
@@ -155,9 +172,9 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
         ) {
           recordingCanceledRef.current = true;
           setRecordingCanceled(true);
+          setShowCancelUI(true);
           cancelRecording();
         }
-        // Если свайп вверх более чем на 50px → досрочно отправляем (если ещё не отправляли)
         if (
           gestureState.dy < -50 &&
           recordingActiveRef.current &&
@@ -166,18 +183,17 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
         ) {
           recordingSentRef.current = true;
           setRecordingSent(true);
+          setShowCancelUI(false);
           finishRecording();
         }
+        if (gestureState.dx < -20 && !recordingCanceledRef.current) {
+          setShowCancelUI(true);
+        } else if (gestureState.dx > -10 && !recordingCanceledRef.current) {
+          setShowCancelUI(false);
+        }
       },
-
       onPanResponderRelease: () => {
-        // Когда палец отпускает кнопку: возвращаем анимацию
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          useNativeDriver: true,
-        }).start();
-
-        // Если всё ещё активна запись и не было отмены/отправки свайпом → отправляем
+        setShowCancelUI(false);
         if (
           recordingActiveRef.current &&
           !recordingCanceledRef.current &&
@@ -194,13 +210,11 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
   // ==== Функция начала записи аудио ====
   const startRecording = async () => {
     if (recordingRef.current) {
-      console.warn('Recording already in progress');
       return;
     }
     try {
       const { status } = await Audio.requestPermissionsAsync();
       if (status !== 'granted') {
-        alert('Нужно разрешение на запись аудио');
         recordingActiveRef.current = false;
         setRecordingActive(false);
         return;
@@ -210,15 +224,12 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
         playsInSilentModeIOS: true,
       });
       const rec = new Audio.Recording();
-      // @ts-ignore
-      await rec.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+      await rec.prepareToRecordAsync(RECORDING_OPTIONS);
       await rec.startAsync();
       recordingRef.current = rec;
       const startTime = Date.now();
       recordingStartTime.current = startTime;
       setRecordingDuration('0:00');
-
-      // Запускаем таймер, чтобы обновлять длительность записи
       recordingTimer.current = setInterval(() => {
         if (recordingStartTime.current) {
           const durationMs = Date.now() - recordingStartTime.current;
@@ -231,7 +242,6 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
         }
       }, 300);
     } catch (e) {
-      console.error('startRecording error:', e);
       alert('Ошибка при начале записи');
       recordingActiveRef.current = false;
       setRecordingActive(false);
@@ -246,20 +256,38 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
         recordingTimer.current = null;
       }
       const rec = recordingRef.current;
-      if (!rec) return;
-
-      // Останавливаем и выгружаем запись, получаем статус
+      if (!rec) {
+        return;
+      }
+      const now = Date.now();
+      const started = recordingStartTime.current || now;
+      const diff = now - started;
+      if (diff < 300) {
+        return;
+      }
       const status = await rec.stopAndUnloadAsync();
-      const uri = rec.getURI()!;
+      const uri = rec.getURI();
       recordingRef.current = null;
-
-      // Форматируем длительность «M:SS»
-      const durationMillis = status.durationMillis ?? 0;
+      let durationMillis = status.durationMillis ?? 0;
+      if (durationMillis === 0 && uri) {
+        try {
+          const { sound } = await Audio.Sound.createAsync({ uri });
+          const soundStatus = await sound.getStatusAsync();
+          if (soundStatus.isLoaded) {
+            durationMillis = soundStatus.durationMillis ?? 0;
+          }
+          await sound.unloadAsync();
+        } catch (e) {
+          console.error('Error getting duration from sound:', e);
+        }
+      }
       const totalSeconds = Math.floor(durationMillis / 1000);
       const minutes = Math.floor(totalSeconds / 60);
       const seconds = totalSeconds % 60;
       const duration = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-
+      if (!uri || durationMillis < 700) {
+        return;
+      }
       const audioMsg: Message = {
         _id: Date.now(),
         createdAt: new Date(),
@@ -267,10 +295,10 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
         text: duration,
         audioUri: uri,
         audioDuration: duration,
+        waveform: Array.from({ length: 32 }, () => Math.floor(Math.random() * 16) + 8),
       };
       setMessages((prev) => GiftedChat.append(prev, [audioMsg]));
     } catch (e) {
-      console.error('finishRecording error:', e);
       alert('Ошибка при завершении записи');
     }
   };
@@ -283,12 +311,13 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
         recordingTimer.current = null;
       }
       const rec = recordingRef.current;
-      if (!rec) return;
-      // Останавливаем и выгружаем запись без отправки сообщения
+      if (!rec) {
+        return;
+      }
       await rec.stopAndUnloadAsync();
       recordingRef.current = null;
-    } catch {
-      // Игнорируем любые ошибки при отмене
+    } catch (e) {
+      console.error('cancelRecording error:', e);
     }
   };
 
@@ -545,6 +574,19 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
     // Если это голосовое сообщение (audioUri есть) — рендерим ▶/⏸ + длительность
     if (currentMessage.audioUri) {
       const isPlaying = playingUri === currentMessage.audioUri;
+      const waveform = currentMessage.waveform || Array.from({ length: 32 }, () => 12);
+      // Динамическая ширина bubble
+      const minWidth = 60;
+      const maxWidth = 320;
+      const maxDuration = 60; // сек
+      let durationSec = 0;
+      if (currentMessage.audioDuration) {
+        const [min, sec] = currentMessage.audioDuration.split(':').map(Number);
+        durationSec = (min || 0) * 60 + (sec || 0);
+      }
+      const bubbleWidth = Math.round(
+        minWidth + Math.min(durationSec, maxDuration) / maxDuration * (maxWidth - minWidth)
+      );
       return (
         <View
           style={[
@@ -552,6 +594,7 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
             props.position === 'right'
               ? styles.voiceMessageBubbleRight
               : styles.voiceMessageBubbleLeft,
+            { width: bubbleWidth, maxWidth: '75%', marginHorizontal: 4 },
           ]}
         >
           <TouchableOpacity
@@ -564,6 +607,23 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
               color="#fff"
             />
           </TouchableOpacity>
+          {/* Waveform */}
+          <View style={styles.waveformContainer}>
+            {waveform.map((h, i) => (
+              <View
+                key={i}
+                style={{
+                  width: 2,
+                  height: h,
+                  marginHorizontal: 0.5,
+                  borderRadius: 1,
+                  backgroundColor: props.position === 'right' ? '#a259ff' : '#bbb',
+                  opacity: 0.7 + 0.3 * (h / 24),
+                  alignSelf: 'flex-end',
+                }}
+              />
+            ))}
+          </View>
           <Text style={styles.voiceMessageText}>
             {currentMessage.audioDuration}
           </Text>
@@ -592,14 +652,11 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
   };
 
   return (
-    <SafeAreaView
-      style={[styles.safeArea, { backgroundColor: colors.background }]}
-    >
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <KeyboardAvoidingView
-        style={styles.container}
+        style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        // Увеличили offset, чтобы учесть высоту статус-бара и header-а
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 80}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
         <GiftedChat
           messages={messages}
@@ -607,22 +664,20 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
           renderBubble={renderBubble}
           isTyping={isTyping}
           showUserAvatar={false}
-          // Увеличили bottomOffset, чтобы поле ввода поднималось выше подсказок клавиатуры
           bottomOffset={Platform.OS === 'ios' ? 100 : 80}
           listViewProps={{ keyboardDismissMode: 'on-drag' } as any}
           text={text}
           onInputTextChanged={setText}
           renderInputToolbar={() => (
-            <View style={styles.inputToolbar}>
+            <View style={[styles.inputToolbar, { paddingHorizontal: 0, justifyContent: 'space-between' }]}>
               {/* Кнопка «прикрепить изображение» */}
-              <TouchableOpacity onPress={onPickImage}>
+              <TouchableOpacity onPress={onPickImage} style={{ marginHorizontal: 8 }}>
                 <Ionicons
                   name="attach-outline"
                   size={24}
                   color={colors.primary}
                 />
               </TouchableOpacity>
-
               {/* Сам текстовый input */}
               <TextInput
                 style={[
@@ -637,10 +692,8 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
                 placeholderTextColor={colors.muted}
                 value={text}
                 onChangeText={setText}
-                editable={!recordingActive} // блокировка ввода при записи
+                editable={!recordingActive}
               />
-
-              {/* Если идёт запись и не отменена, показываем таймер */}
               {recordingActive && !recordingCanceled && (
                 <Text
                   style={[styles.recordingTimer, { color: colors.primary }]}
@@ -648,24 +701,24 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
                   {recordingDuration}
                 </Text>
               )}
-
-              {/* Кнопка микрофона для записи */}
+              {/* Кнопка микрофона теперь справа */}
               <Animated.View
-                style={[
-                  styles.recordButtonContainer,
-                  { transform: [{ scale: scaleAnim }] },
-                ]}
+                style={[styles.recordButtonContainer, { marginLeft: 8, marginRight: 0 }]}
                 {...panResponder.panHandlers}
               >
-                <Ionicons name="mic-outline" size={20} color="#fff" />
+                <Ionicons name="mic-outline" size={24} color="#fff" />
               </Animated.View>
-
+              {showCancelUI && (
+                <View style={styles.cancelButtonContainer}>
+                  <Ionicons name="close" size={28} color="#fff" />
+                </View>
+              )}
               {/* Кнопка «отправить текст» */}
               <TouchableOpacity
                 onPress={handleSendText}
-                style={[styles.sendButton, { backgroundColor: colors.primary }]}
+                style={[styles.sendButton, { backgroundColor: colors.primary, marginLeft: 8 }]}
               >
-                <Ionicons name="send" size={20} color={colors.card} />
+                <Ionicons name="send" size={24} color={colors.card} />
               </TouchableOpacity>
             </View>
           )}
@@ -688,7 +741,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderTopColor: '#ccc',
     borderTopWidth: 1,
-    padding: 8,
+    padding: 0,
+    paddingHorizontal: 0,
+    justifyContent: 'space-between',
   },
 
   textInput: {
@@ -709,13 +764,23 @@ const styles = StyleSheet.create({
   },
 
   recordButtonContainer: {
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
     backgroundColor: '#6A0DAD',
-    borderRadius: 20,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 8,
+    marginRight: 0,
+  },
+
+  waveformContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    marginHorizontal: 6,
+    height: 24,
+    minWidth: 70,
+    flex: 1,
   },
 
   voiceMessageBubble: {
@@ -725,6 +790,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginVertical: 2,
     maxWidth: '75%',
+    marginHorizontal: 4,
   },
 
   voiceMessageBubbleRight: {
@@ -744,6 +810,7 @@ const styles = StyleSheet.create({
   voiceMessageText: {
     color: '#fff',
     fontSize: 16,
+    marginLeft: 6,
   },
 
   recordingTimer: {
@@ -754,6 +821,16 @@ const styles = StyleSheet.create({
 
   headerButton: {
     // Вместо marginRight добавили paddingRight, чтобы не обрезалась иконка
-    paddingRight: 20,
+    paddingRight: 30,
+  },
+
+  cancelButtonContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#D32F2F',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
   },
 });
