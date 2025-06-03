@@ -1,0 +1,22 @@
+diff --git a/node_modules/react-native-gifted-chat/lib/GiftedChat/index.js b/node_modules/react-native-gifted-chat/lib/GiftedChat/index.js
+index 4fc42d2..f921261 100644
+--- a/node_modules/react-native-gifted-chat/lib/GiftedChat/index.js
++++ b/node_modules/react-native-gifted-chat/lib/GiftedChat/index.js
+@@ -22,7 +22,16 @@ import { SystemMessage } from '../SystemMessage';
+ import { Time } from '../Time';
+ import * as utils from '../utils';
+ import Animated, { useAnimatedStyle, useAnimatedReaction, useSharedValue, withTiming, runOnJS, } from 'react-native-reanimated';
+-import { KeyboardProvider, useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
++// вместо нативного KeyboardController — JS-заглушка
++let KeyboardProvider, useReanimatedKeyboardAnimation;
++try {
++  ({ KeyboardProvider, useReanimatedKeyboardAnimation } =
++    require('react-native-keyboard-controller'));
++} catch (e) {
++  KeyboardProvider = ({ children }) => children;
++  useReanimatedKeyboardAnimation = () => ({ height: { value: 0 } });
++}
++
+ import stylesCommon from '../styles';
+ import styles from './styles';
+ dayjs.extend(localizedFormat);
