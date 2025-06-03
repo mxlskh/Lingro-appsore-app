@@ -1,16 +1,15 @@
 // src/screens/SplashScreen.tsx
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Image, Platform } from 'react-native';
-import { useAppTheme } from '../context/ThemeContext';
-import { Spacing, FontSizes } from '../theme';
+import { View, StyleSheet, Image, StatusBar } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 type Props = {
   navigation: any;
 };
 
-export default function SplashScreen({ navigation }: Props) {
-  const { colors } = useAppTheme();
+const GRADIENT_COLORS: [string, string] = ['#F7B7C3', '#B6A4F7'];
 
+export default function SplashScreen({ navigation }: Props) {
   useEffect(() => {
     // через 2 секунды переходим на SignIn
     const timer = setTimeout(() => {
@@ -20,36 +19,30 @@ export default function SplashScreen({ navigation }: Props) {
   }, [navigation]);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* логотип приложения */}
-      <Image
-        source={require('../../assets/logo.png')}
-        style={styles.logo}
-        resizeMode="contain"
-      />
-      {/* название */}
-      <Text style={[styles.text, { color: colors.primary }]}>Lingro</Text>
-    </View>
+    <LinearGradient colors={GRADIENT_COLORS} style={styles.gradient}>
+      <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
+      <View style={styles.container}>
+        <Image
+          source={require('../../assets/splash.png')}
+          style={styles.splash}
+          resizeMode="contain"
+        />
+      </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  gradient: {
+    flex: 1
+  },
   container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center'
   },
-  logo: {
-    width: 120,
-    height: 120,
-    marginBottom: Spacing.lg
-  },
-  text: {
-    fontSize: FontSizes.xl * 1.5,
-    fontWeight: '800',
-    ...Platform.select({
-      ios:   { fontFamily: 'AvenirNext-Heavy' },
-      android: { fontFamily: 'sans-serif-black' }
-    })
+  splash: {
+    width: 220,
+    height: 220
   }
 });

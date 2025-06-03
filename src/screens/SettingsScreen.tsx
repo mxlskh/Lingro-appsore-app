@@ -1,106 +1,107 @@
 // src/screens/SettingsScreen.tsx
 import React from 'react';
 import {
-  SafeAreaView,
   View,
   Text,
   Switch,
   TouchableOpacity,
   StyleSheet,
-  ScrollView,
-  Platform
+  Platform,
+  StatusBar,
+  Image
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
-import { useAppTheme } from '../context/ThemeContext';
-import { Spacing, BorderRadius, FontSizes } from '../theme';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
+const GRADIENT_COLORS: [string, string] = ['#F7B7C3', '#B6A4F7'];
 
-export default function SettingsScreen({ navigation, route }: Props) {
-  const { isDark, toggleTheme, colors } = useAppTheme();
+export default function SettingsScreen({ navigation, route }: NativeStackScreenProps<RootStackParamList, 'Settings'>) {
+  const { isDark, toggleTheme } = require('../context/ThemeContext').useAppTheme();
   const { role } = route.params;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Логотип / название приложения */}
-      <Text style={[styles.logo, { color: colors.primary }]}>Lingro</Text>
-      {/* Заголовок экрана */}
-      <Text style={[styles.screenTitle, { color: colors.text }]}>Настройки</Text>
-
-      <ScrollView contentContainerStyle={styles.content}>
+    <LinearGradient colors={GRADIENT_COLORS} style={styles.gradient}>
+      <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
+      <View style={styles.container}>
+        <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
+        <Text style={styles.title}>Настройки</Text>
         <View style={styles.row}>
-          <Text style={[styles.label, { color: colors.text }]}>Тёмная тема</Text>
+          <Text style={styles.label}>Тёмная тема</Text>
           <Switch
             value={isDark}
             onValueChange={toggleTheme}
-            trackColor={{ true: colors.primary }}
-            thumbColor={isDark ? colors.accent : undefined}
+            trackColor={{ true: '#B6A4F7' }}
+            thumbColor={isDark ? '#F7B7C3' : undefined}
           />
         </View>
-
-        <TouchableOpacity
-          style={[styles.button, { borderColor: colors.border }]}
-          onPress={() => navigation.replace('RoleSelection')}
-        >
-          <Text style={[styles.buttonText, { color: colors.text }]}>Изменить роль</Text>
+        <TouchableOpacity style={styles.button} onPress={() => navigation.replace('RoleSelection')}>
+          <Text style={styles.buttonText}>Изменить роль</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.button, { borderColor: colors.border }]}
-          onPress={() => navigation.replace('LanguageSelection', { role })}
-        >
-          <Text style={[styles.buttonText, { color: colors.text }]}>Изменить язык</Text>
+        <TouchableOpacity style={styles.button} onPress={() => navigation.replace('LanguageSelection', { role })}>
+          <Text style={styles.buttonText}>Изменить язык</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity style={[styles.button, { borderColor: colors.border }]}>
-          <Text style={[styles.buttonText, { color: colors.text }]}>О разработчиках</Text>
+        <TouchableOpacity style={styles.button}>
+          <Text style={styles.buttonText}>О разработчиках</Text>
         </TouchableOpacity>
-      </ScrollView>
-    </SafeAreaView>
+      </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  gradient: {
     flex: 1
   },
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24
+  },
   logo: {
-    fontSize: FontSizes.xl * 1.5,
-    fontWeight: '800',
-    textAlign: 'center',
-    marginVertical: Spacing.md,
-    ...Platform.select({
-      ios:   { fontFamily: 'AvenirNext-Heavy' },
-      android: { fontFamily: 'sans-serif-black' }
-    })
+    width: 100,
+    height: 100,
+    marginBottom: 0
   },
-  screenTitle: {
-    fontSize: FontSizes.lg,
-    fontWeight: '600',
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: 0,
     textAlign: 'center',
-    marginBottom: Spacing.lg
-  },
-  content: {
-    padding: Spacing.md
+    letterSpacing: 0.2
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginVertical: Spacing.sm
+    width: 240,
+    marginBottom: 16
   },
   label: {
-    fontSize: FontSizes.md
+    fontSize: 17,
+    color: '#B6A4F7',
+    fontWeight: '600'
   },
   button: {
-    backgroundColor: 'transparent',
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    marginVertical: Spacing.sm,
-    borderWidth: 1
+    width: 240,
+    height: 48,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#B6A4F7',
+    shadowColor: '#B6A4F7',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 2,
+    marginBottom: 8
   },
   buttonText: {
-    fontSize: FontSizes.md
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: 0.5
   }
 });
