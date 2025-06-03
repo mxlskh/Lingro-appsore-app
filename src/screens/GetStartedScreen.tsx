@@ -1,73 +1,75 @@
 // src/screens/GetStartedScreen.tsx
 import React from 'react';
 import {
-  SafeAreaView,
+  View,
   Text,
   TouchableOpacity,
   StyleSheet,
-  Platform
+  Platform,
+  StatusBar,
+  Image
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useAppTheme } from '../context/ThemeContext';
 import type { RootStackParamList } from '../../App';
-import { Spacing, FontSizes, BorderRadius } from '../theme';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'GetStarted'>;
+const GRADIENT_COLORS: [string, string] = ['#F7B7C3', '#B6A4F7'];
 
-export default function GetStartedScreen({ navigation }: Props) {
-  const { colors } = useAppTheme();
-
+export default function GetStartedScreen({ navigation }: NativeStackScreenProps<RootStackParamList, 'GetStarted'>) {
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Логотип / название */}
-      <Text style={[styles.logo, { color: colors.primary }]}>Lingro</Text>
-      {/* Основной заголовок */}
-      <Text style={[styles.title, { color: colors.text }]}>
-        Начнём наше путешествие в мир языков!
-      </Text>
-      <TouchableOpacity
-        style={[styles.button, { backgroundColor: colors.primary }]}
-        onPress={() => navigation.replace('RoleSelection')}
-      >
-        <Text style={[styles.buttonText, { color: colors.card }]}>
-          Давай по порядку
-        </Text>
-      </TouchableOpacity>
-    </SafeAreaView>
+    <LinearGradient colors={GRADIENT_COLORS} style={styles.gradient}>
+      <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
+      <View style={styles.container}>
+        <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
+        <Text style={styles.title}>Начнём наше путешествие в мир языков!</Text>
+        <TouchableOpacity style={styles.button} onPress={() => navigation.replace('RoleSelection')}>
+          <Text style={styles.buttonText}>Давай по порядку</Text>
+        </TouchableOpacity>
+      </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  gradient: {
+    flex: 1
+  },
   container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: Spacing.md
+    paddingHorizontal: 24
   },
   logo: {
-    fontSize: FontSizes.xl * 1.5,
-    fontWeight: '800',
-    textAlign: 'center',
-    marginBottom: Spacing.lg,
-    ...Platform.select({
-      ios: { fontFamily: 'AvenirNext-Heavy' },
-      android: { fontFamily: 'sans-serif-black' }
-    })
+    width: 120,
+    height: 120,
+    marginBottom: 24
   },
   title: {
-    fontSize: FontSizes.lg,
-    fontWeight: '600',
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: 40,
     textAlign: 'center',
-    marginBottom: Spacing.xl
+    letterSpacing: 0.2
   },
   button: {
-    padding: Spacing.md,
-    borderRadius: BorderRadius.lg,
-    width: '80%',
-    alignItems: 'center'
+    width: 240,
+    height: 48,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#B6A4F7',
+    shadowColor: '#B6A4F7',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 2
   },
   buttonText: {
-    fontSize: FontSizes.md,
-    fontWeight: '600'
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: 0.5
   }
 });

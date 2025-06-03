@@ -1,156 +1,146 @@
 import React, { useState } from 'react';
 import {
-  SafeAreaView,
-  ScrollView,
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  KeyboardAvoidingView,
   Platform,
-  StatusBar
+  StatusBar,
+  KeyboardAvoidingView,
+  Keyboard,
+  TouchableWithoutFeedback
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
 import { useAppTheme } from '../context/ThemeContext';
-import { Spacing, BorderRadius, FontSizes } from '../theme';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'SignUp'>;
+const GRADIENT_COLORS: [string, string] = ['#F7B7C3', '#B6A4F7'];
 
-export default function SignUpScreen({ navigation }: Props) {
+export default function SignUpScreen({ navigation }: NativeStackScreenProps<RootStackParamList, 'SignUp'>) {
   const { colors } = useAppTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.background }}
+      style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      keyboardVerticalOffset={0}
     >
-      <StatusBar
-        translucent
-        backgroundColor="transparent"
-        barStyle={colors.background === '#fff' ? 'dark-content' : 'light-content'}
-      />
-
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-        <ScrollView
-          contentContainerStyle={[
-            styles.scrollContainer,
-            { backgroundColor: colors.background }
-          ]}
-          keyboardShouldPersistTaps="handled"
-        >
-          <Text style={[styles.logo, { color: colors.primary }]}>
-            Lingro
-          </Text>
-          <Text style={[styles.title, { color: colors.text }]}>
-            Новая учётная запись
-          </Text>
-
-          <View style={styles.formContainer}>
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  backgroundColor: colors.card,
-                  borderColor: colors.border,
-                  color: colors.text
-                }
-              ]}
-              placeholder="Email"
-              placeholderTextColor={colors.muted}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  backgroundColor: colors.card,
-                  borderColor: colors.border,
-                  color: colors.text
-                }
-              ]}
-              placeholder="Пароль"
-              placeholderTextColor={colors.muted}
-              secureTextEntry
-              value={password}
-              onChangeText={setPassword}
-            />
-
-            <TouchableOpacity
-              style={[styles.button, { backgroundColor: colors.accent }]}
-              onPress={() => navigation.replace('GetStarted')}
-            >
-              <Text style={[styles.buttonText, { color: colors.card }]}>
-                Зарегистрироваться
-              </Text>
-            </TouchableOpacity>
-
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <LinearGradient colors={GRADIENT_COLORS} style={styles.gradient}>
+          <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
+          <View style={styles.container}>
+            <Text style={styles.logo}>Lingro</Text>
+            <Text style={styles.title}>Новая учётная запись</Text>
+            <View style={styles.form}>
+              <TextInput
+                style={styles.input}
+                placeholder="Email"
+                placeholderTextColor="#B6A4F7"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Пароль"
+                placeholderTextColor="#B6A4F7"
+                secureTextEntry
+                value={password}
+                onChangeText={setPassword}
+              />
+              <TouchableOpacity style={styles.button} onPress={() => navigation.replace('GetStarted')}>
+                <Text style={styles.buttonText}>Зарегистрироваться</Text>
+              </TouchableOpacity>
+            </View>
             <TouchableOpacity onPress={() => navigation.goBack()}>
-              <Text style={[styles.link, { color: colors.primary }]}>
-                Уже есть аккаунт? Войти
-              </Text>
+              <Text style={styles.link}>Уже есть аккаунт? Войти</Text>
             </TouchableOpacity>
           </View>
-        </ScrollView>
-      </SafeAreaView>
+        </LinearGradient>
+      </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollContainer: {
-    flexGrow: 1,
+  gradient: {
+    flex: 1
+  },
+  container: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: Spacing.md
+    paddingHorizontal: 24
   },
   logo: {
-    fontSize: FontSizes.xl * 1.5,
+    fontSize: 48,
     fontWeight: '800',
-    textAlign: 'center',
-    marginBottom: Spacing.lg,
+    color: '#fff',
+    marginBottom: 12,
+    marginTop: 32,
+    letterSpacing: 1.5,
     ...Platform.select({
       ios: { fontFamily: 'AvenirNext-Heavy' },
       android: { fontFamily: 'sans-serif-black' }
     })
   },
   title: {
-    fontSize: FontSizes.lg,
+    fontSize: 22,
     fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: Spacing.lg
+    color: '#fff',
+    marginBottom: 32,
+    textAlign: 'center'
   },
-  formContainer: {
-    width: '80%'
+  form: {
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 24
   },
   input: {
-    borderWidth: 1,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.sm,
-    marginBottom: Spacing.md,
-    fontSize: FontSizes.md
+    width: 280,
+    height: 48,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    marginBottom: 16,
+    shadowColor: '#B6A4F7',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2
   },
   button: {
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
+    width: 280,
+    height: 48,
+    borderRadius: 16,
     alignItems: 'center',
-    marginBottom: Spacing.sm
+    justifyContent: 'center',
+    backgroundColor: '#B6A4F7',
+    shadowColor: '#B6A4F7',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 2,
+    marginTop: 8
   },
   buttonText: {
-    fontSize: FontSizes.md,
-    fontWeight: '600'
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: 0.5
   },
   link: {
-    fontSize: FontSizes.sm,
+    color: '#fff',
+    fontSize: 15,
+    marginTop: 16,
     textAlign: 'center',
-    marginTop: Spacing.md
+    textDecorationLine: 'underline',
+    opacity: 0.9
   }
 });
