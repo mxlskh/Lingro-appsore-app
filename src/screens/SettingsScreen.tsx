@@ -57,18 +57,22 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 24
+    paddingHorizontal: 24,
+    paddingTop: 0,
+    paddingBottom: 0
   },
   logo: {
     width: 100,
     height: 100,
-    marginBottom: 0
+    marginBottom: 0,
+    marginTop: 0
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
     color: '#fff',
     marginBottom: 0,
+    marginTop: 0,
     textAlign: 'center',
     letterSpacing: 0.2
   },
@@ -77,7 +81,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     width: 240,
-    marginBottom: 16
+    marginBottom: 8,
+    marginTop: 0
   },
   label: {
     fontSize: 17,
@@ -96,7 +101,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 8,
     elevation: 2,
-    marginBottom: 8
+    marginBottom: 8,
+    marginTop: 0
   },
   buttonText: {
     color: '#fff',

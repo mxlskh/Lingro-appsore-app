@@ -28,6 +28,7 @@ import Constants from 'expo-constants';
 import { useAppTheme } from '../context/ThemeContext';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
+import { LinearGradient } from 'expo-linear-gradient';
 
 // Определяем пропсы навигатора для ChatScreen
 type ChatProps = NativeStackScreenProps<RootStackParamList, 'Chat'>;
@@ -71,6 +72,8 @@ const RECORDING_OPTIONS = {
   },
   web: {},
 };
+
+const GRADIENT_COLORS: [string, string] = ['#F7B7C3', '#B6A4F7'];
 
 export default function ChatScreen({ navigation, route }: ChatProps) {
   const { colors } = useAppTheme();
@@ -652,12 +655,12 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-      >
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+    >
+      <LinearGradient colors={GRADIENT_COLORS} style={{ flex: 1 }}>
         <GiftedChat
           messages={messages}
           user={{ _id: 1, name: 'Вы' }}
@@ -669,8 +672,7 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
           text={text}
           onInputTextChanged={setText}
           renderInputToolbar={() => (
-            <View style={[styles.inputToolbar, { paddingHorizontal: 0, justifyContent: 'space-between' }]}>
-              {/* Кнопка «прикрепить изображение» */}
+            <View style={[styles.inputToolbar, { borderTopWidth: 0, backgroundColor: 'transparent', paddingHorizontal: 0, justifyContent: 'space-between' }]}>
               <TouchableOpacity onPress={onPickImage} style={{ marginHorizontal: 8 }}>
                 <Ionicons
                   name="attach-outline"
@@ -678,14 +680,18 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
                   color={colors.primary}
                 />
               </TouchableOpacity>
-              {/* Сам текстовый input */}
               <TextInput
                 style={[
                   styles.textInput,
                   {
-                    backgroundColor: colors.card,
-                    borderColor: colors.border,
+                    backgroundColor: '#fff',
+                    borderColor: 'transparent',
                     color: colors.text,
+                    shadowColor: '#B6A4F7',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.08,
+                    shadowRadius: 8,
+                    elevation: 2
                   },
                 ]}
                 placeholder="Напишите сообщение..."
@@ -701,7 +707,6 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
                   {recordingDuration}
                 </Text>
               )}
-              {/* Кнопка микрофона теперь справа */}
               <Animated.View
                 style={[styles.recordButtonContainer, { marginLeft: 8, marginRight: 0 }]}
                 {...panResponder.panHandlers}
@@ -713,7 +718,6 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
                   <Ionicons name="close" size={28} color="#fff" />
                 </View>
               )}
-              {/* Кнопка «отправить текст» */}
               <TouchableOpacity
                 onPress={handleSendText}
                 style={[styles.sendButton, { backgroundColor: colors.primary, marginLeft: 8 }]}
@@ -723,8 +727,8 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
             </View>
           )}
         />
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      </LinearGradient>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -820,8 +824,7 @@ const styles = StyleSheet.create({
   },
 
   headerButton: {
-    // Вместо marginRight добавили paddingRight, чтобы не обрезалась иконка
-    paddingRight: 30,
+    marginRight: 16,
   },
 
   cancelButtonContainer: {
