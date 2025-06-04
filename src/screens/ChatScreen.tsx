@@ -419,40 +419,37 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
   function extractSearchTerm(text: string): string {
     let lower = text.trim().toLowerCase();
 
-    const ruPatterns = [
+    // Сначала удаляем команды поиска
+    const searchCommands = [
       /\bнайди\b/g,
       /\bпокажи\b/g,
       /\bможешь\b/g,
       /\bпришли\b/g,
       /\bискать\b/g,
       /\bищи\b/g,
+    ];
+    for (const cmd of searchCommands) {
+      lower = lower.replace(cmd, '');
+    }
+
+    // Затем удаляем слова, связанные с изображениями
+    const imageWords = [
       /\bизображен(ие|ий|ию|ия)?\b/g,
       /\bфото\b/g,
       /\bкартинки?\b/g,
       /\bфотограф(ию|ия)?\b/g,
       /\bпросьба\b/g,
-    ];
-    for (const pat of ruPatterns) {
-      lower = lower.replace(pat, ' ');
-    }
-
-    const enPatterns = [
-      /\bfind\b/g,
-      /\bshow\b/g,
-      /\bcould\b/g,
-      /\bplease\b/g,
-      /\bsearch\b/g,
-      /\bme\b/g,
       /\bpictures?\b/g,
       /\bimages?\b/g,
       /\bphoto(s)?\b/g,
-      /\bof\b/g,
     ];
-    for (const pat of enPatterns) {
-      lower = lower.replace(pat, ' ');
+    for (const word of imageWords) {
+      lower = lower.replace(word, '');
     }
 
+    // Удаляем лишние пробелы и возвращаем результат
     const term = lower.trim().replace(/\s+/g, ' ');
+    console.log('Cleaned search term:', term);
     return term || text.trim();
   }
 
@@ -541,37 +538,71 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
       }
 
       try {
-        const imageUrls = await searchImagesDuckDuckGo(queryTerm);
-        console.log('Search results:', imageUrls);
-        
-        if (imageUrls.length === 0) {
-          setMessages((prev) =>
-            GiftedChat.append(prev, [
-              {
-                _id: Date.now() + 1,
-                text: `По запросу «${queryTerm}» ничего не найдено. Попробуйте изменить запрос или использовать другие ключевые слова.`,
-                createdAt: new Date(),
-                user: { _id: 2, name: 'Lingro' },
-              },
-            ])
-          );
+        // Если запрос начинается с "сгенерируй" или "создай", используем DALL-E
+        if (/^сгенерируй|^создай|^generate|^create/.test(userText.toLowerCase())) {
+          console.log('Using DALL-E for generation');
+          const res = await fetch(`${API_URL}/api/file/action`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              action: 'custom',
+              prompt: userText 
+            }),
+          });
+          
+          const data = await res.json();
+          console.log('DALL-E response:', data);
+          
+          if (!res.ok) {
+            throw new Error(data.details || data.error || 'Ошибка при генерации изображения');
+          }
+          
+          if (data.imageUrl) {
+            setMessages((prev) => GiftedChat.append(prev, [{
+              _id: Date.now(),
+              createdAt: new Date(),
+              user: { _id: 2, name: 'Lingro' },
+              text: '',
+              image: data.imageUrl,
+            }]));
+          } else {
+            throw new Error('Не удалось сгенерировать изображение');
+          }
         } else {
-          const imageMessages: Message[] = imageUrls.map((url, idx) => ({
-            _id: Date.now() + 10 + idx,
-            createdAt: new Date(),
-            user: { _id: 2, name: 'Lingro' },
-            text: '',
-            image: url,
-          }));
-          setMessages((prev) => GiftedChat.append(prev, imageMessages));
+          // Иначе используем DuckDuckGo для поиска
+          console.log('Using DuckDuckGo for search');
+          const imageUrls = await searchImagesDuckDuckGo(queryTerm);
+          console.log('Search results:', imageUrls);
+          
+          if (imageUrls.length === 0) {
+            setMessages((prev) =>
+              GiftedChat.append(prev, [
+                {
+                  _id: Date.now() + 1,
+                  text: `По запросу «${queryTerm}» ничего не найдено. Попробуйте изменить запрос или использовать другие ключевые слова.`,
+                  createdAt: new Date(),
+                  user: { _id: 2, name: 'Lingro' },
+                },
+              ])
+            );
+          } else {
+            const imageMessages: Message[] = imageUrls.map((url, idx) => ({
+              _id: Date.now() + 10 + idx,
+              createdAt: new Date(),
+              user: { _id: 2, name: 'Lingro' },
+              text: '',
+              image: url,
+            }));
+            setMessages((prev) => GiftedChat.append(prev, imageMessages));
+          }
         }
       } catch (error) {
-        console.error('Image search error:', error);
+        console.error('Image error:', error);
         setMessages((prev) =>
           GiftedChat.append(prev, [
             {
               _id: Date.now() + 1,
-              text: 'Произошла ошибка при поиске изображений. Пожалуйста, попробуйте позже.',
+              text: error instanceof Error ? error.message : 'Произошла ошибка при обработке изображения. Пожалуйста, попробуйте позже.',
               createdAt: new Date(),
               user: { _id: 2, name: 'Lingro' },
             },
