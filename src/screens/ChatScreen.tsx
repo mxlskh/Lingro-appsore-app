@@ -606,22 +606,18 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
         // Если запрос начинается с "сгенерируй" или "создай", используем DALL-E
         if (/^сгенерируй|^создай|^generate|^create/.test(userText.toLowerCase())) {
           console.log('Using DALL-E for generation');
-          const res = await fetch(`${API_URL}/api/file/action`, {
+          const res = await fetch(`${API_URL}/api/generate-image`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
-              action: 'custom',
               prompt: userText 
             }),
           });
-          
           const data = await res.json();
           console.log('DALL-E response:', data);
-          
           if (!res.ok) {
             throw new Error(data.details || data.error || 'Ошибка при генерации изображения');
           }
-          
           if (data.imageUrl) {
             setMessages((prev) => GiftedChat.append(prev, [{
               _id: Date.now(),
