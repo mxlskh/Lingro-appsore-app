@@ -498,6 +498,68 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
     }
   }
 
+  const handleImageRequest = async (message: string) => {
+    try {
+      // Определяем, является ли запрос генерацией изображения
+      const isGenerationRequest = /сгенерируй|создай|generate|create/.test(message.toLowerCase());
+      
+      if (isGenerationRequest) {
+        // Извлекаем описание для генерации
+        const prompt = message
+          .replace(/сгенерируй|создай|generate|create|фото|картинк|изображен|picture|image/g, '')
+          .trim();
+
+        if (!prompt) {
+          throw new Error('Пожалуйста, укажите описание изображения');
+        }
+
+        // Отправляем запрос на генерацию
+        const response = await fetch(`${API_URL}/api/generate-image`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ prompt }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.details || 'Ошибка при генерации изображения');
+        }
+
+        const data = await response.json();
+        return {
+          type: 'image',
+          url: data.imageUrl,
+          dalleUrl: data.dalleUrl
+        };
+      } else {
+        // Поиск существующих изображений через DuckDuckGo
+        const searchTerm = message
+          .replace(/найди|покажи|можешь|пришли|искать|ищи|фото|картинк|изображен|picture|image/g, '')
+          .trim();
+
+        if (!searchTerm) {
+          throw new Error('Пожалуйста, укажите, что искать');
+        }
+
+        const response = await fetch(`${API_URL}/api/search-images?q=${encodeURIComponent(searchTerm)}`);
+        if (!response.ok) {
+          throw new Error('Ошибка при поиске изображений');
+        }
+
+        const data = await response.json();
+        return {
+          type: 'image',
+          url: data.imageUrl
+        };
+      }
+    } catch (error) {
+      console.error('Image request error:', error);
+      throw error;
+    }
+  };
+
   // ==== Логика отправки текстового сообщения или «фото-запроса» ====
   const handleSendText = useCallback(async () => {
     if (!text.trim()) {
