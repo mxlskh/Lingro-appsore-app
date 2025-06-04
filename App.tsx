@@ -1,7 +1,7 @@
 // App.tsx
 
 import React from 'react';
-import { SafeAreaView, StyleSheet } from 'react-native';
+import { SafeAreaView, StyleSheet, StatusBar } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
@@ -16,6 +16,7 @@ import SettingsScreen from './src/screens/SettingsScreen';
 
 import { LightNavTheme, DarkNavTheme } from './src/theme';
 import { ThemeProvider, useAppTheme } from './src/context/ThemeContext';
+import { VoiceProvider } from './src/context/VoiceContext';
 
 // 1) Типизация всех экранов и их параметров:
 export type RootStackParamList = {
@@ -124,9 +125,11 @@ function AppWrapper() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AppWrapper />
-    </ThemeProvider>
+    <VoiceProvider>
+      <ThemeProvider>
+        <AppWrapper />
+      </ThemeProvider>
+    </VoiceProvider>
   );
 }
 

@@ -37,6 +37,8 @@ import type { RootStackParamList } from '../../App';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as DocumentPicker from 'expo-document-picker';
 import { uploadFile, API_URL } from '../api/client';
+import { useVoice } from '../context/VoiceContext';
+import * as Speech from 'expo-speech';
 
 // Определяем пропсы навигатора для ChatScreen
 type ChatProps = NativeStackScreenProps<RootStackParamList, 'Chat'>;
@@ -138,6 +140,7 @@ function FileActionMenu({ visible, onClose, onAction }: { visible: boolean, onCl
 
 export default function ChatScreen({ navigation, route }: ChatProps) {
   const { colors } = useAppTheme();
+  const { selectedVoice, speak } = useVoice();
 
   // Забираем role и language из route.params
   const { role, language } = route.params;
@@ -960,6 +963,20 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
     }
 
     // Одинаковый стиль для всех bubble
+    if (currentMessage.user._id === 2 && currentMessage.text) {
+      return (
+        <View style={{ position: 'relative', backgroundColor: '#fff', borderRadius: 20, margin: 8, padding: 16, shadowColor: '#B6A4F7', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.10, shadowRadius: 8, elevation: 2, maxWidth: '75%' }}>
+          <Text style={{ color: '#222', fontSize: 17, paddingRight: 36 }}>{currentMessage.text}</Text>
+          <TouchableOpacity
+            onPress={() => speak(currentMessage.text)}
+            style={{ position: 'absolute', right: 8, top: 8 }}
+          >
+            <Ionicons name="volume-high-outline" size={22} color="#6A0DAD" />
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
     return (
       <View style={{
         backgroundColor: '#fff',
