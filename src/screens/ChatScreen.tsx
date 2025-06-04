@@ -931,6 +931,8 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
       );
     }
     if (currentMessage.file?.url && currentMessage.file?.name) {
+      const fileId = currentMessage.file.url.split('/').pop();
+      console.log('renderBubble fileId:', fileId, currentMessage.file);
       return (
         <View style={{ backgroundColor: '#fff', borderRadius: 20, margin: 8, padding: 16, shadowColor: '#B6A4F7', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.10, shadowRadius: 8, elevation: 2, maxWidth: '75%' }}>
           <Ionicons name="document-outline" size={28} color="#B6A4F7" style={{ marginBottom: 8 }} />
@@ -945,7 +947,10 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
           )}
           {/* Кнопка действия с файлом для любого типа файла */}
           <TouchableOpacity
-            onPress={() => setFileActionMenu({ visible: true, fileId: currentMessage.file!.url.split('/').pop() })}
+            onPress={() => {
+              console.log('Открытие меню действий с файлом, fileId:', fileId);
+              setFileActionMenu({ visible: true, fileId });
+            }}
             style={{ marginTop: 8 }}
           >
             <Text style={{ color: '#6A0DAD', fontSize: 15, textDecorationLine: 'underline' }}>Действие с файлом</Text>
@@ -974,16 +979,32 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
   };
 
   const [fileActionMenu, setFileActionMenu] = useState<{ visible: boolean, fileId?: string } | null>(null);
+  const [fileActionLoading, setFileActionLoading] = useState(false);
+  const [fileActionText, setFileActionText] = useState('');
 
   // Функция для отправки действия на backend
   const handleFileAction = async (fileId: string, action: string, prompt?: string) => {
+    console.log('handleFileAction', { fileId, action, prompt });
+    setFileActionLoading(true);
+    setFileActionText(
+      action === 'fix'
+        ? 'Идет исправление ошибок...'
+        : action === 'translate'
+        ? 'Идет перевод документа...'
+        : action === 'analyze'
+        ? 'Идет анализ документа...'
+        : 'Обработка файла...'
+    );
     try {
-      const res = await fetch(`${API_URL}/api/file/action`, {
+      const url = `${API_URL}/api/file/action`;
+      console.log('fetch', url, { fileId, action, prompt });
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fileId, action: action === 'custom' ? 'analyze' : action, prompt }),
       });
       const data = await res.json();
+      console.log('file action response', data);
       if (!res.ok) {
         // Показываем детальное сообщение об ошибке
         const errorMessage = data.details || data.error || 'Ошибка при обработке файла';
@@ -995,10 +1016,8 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
         }]));
         return;
       }
-
       // Добавляем результат в чат
       if (data.imageUrl) {
-        // Для сгенерированных изображений
         setMessages((prev) => GiftedChat.append(prev, [{
           _id: Date.now(),
           createdAt: new Date(),
@@ -1022,25 +1041,17 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
           text: '',
           file: { name: 'Переведённый файл', url: data.translatedUrl, type: 'text/plain', status: 'done' },
         }]));
-      }
-      if (data.text) {
+      } else if (action === 'analyze' && data.analysis) {
         setMessages((prev) => GiftedChat.append(prev, [{
-          _id: Date.now() + 1,
-          createdAt: new Date(),
-          user: { _id: 2, name: 'Lingro' },
-          text: data.text,
-        }]));
-      }
-      if (data.analysis) {
-        setMessages((prev) => GiftedChat.append(prev, [{
-          _id: Date.now() + 2,
+          _id: Date.now(),
           createdAt: new Date(),
           user: { _id: 2, name: 'Lingro' },
           text: data.analysis,
         }]));
       }
-    } catch (e: any) {
-      Alert.alert('Ошибка', e.message || 'Ошибка при обработке файла');
+    } finally {
+      setFileActionLoading(false);
+      setFileActionText('');
     }
   };
 
@@ -1126,6 +1137,16 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
         onClose={() => setFileActionMenu(null)}
         onAction={(action, prompt) => fileActionMenu?.fileId && handleFileAction(fileActionMenu.fileId, action, prompt)}
       />
+      <Modal visible={fileActionLoading} transparent animationType="fade">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.2)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 20, padding: 32, alignItems: 'center' }}>
+            <ActivityIndicator size="large" color="#6A0DAD" />
+            <Text style={{ marginTop: 18, fontSize: 18, color: '#6A0DAD', fontWeight: 'bold', textAlign: 'center' }}>
+              {fileActionText}
+            </Text>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
