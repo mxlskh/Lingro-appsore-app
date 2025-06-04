@@ -419,40 +419,37 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
   function extractSearchTerm(text: string): string {
     let lower = text.trim().toLowerCase();
 
-    const ruPatterns = [
+    // Сначала удаляем команды поиска
+    const searchCommands = [
       /\bнайди\b/g,
       /\bпокажи\b/g,
       /\bможешь\b/g,
       /\bпришли\b/g,
       /\bискать\b/g,
       /\bищи\b/g,
+    ];
+    for (const cmd of searchCommands) {
+      lower = lower.replace(cmd, '');
+    }
+
+    // Затем удаляем слова, связанные с изображениями
+    const imageWords = [
       /\bизображен(ие|ий|ию|ия)?\b/g,
       /\bфото\b/g,
       /\bкартинки?\b/g,
       /\bфотограф(ию|ия)?\b/g,
       /\bпросьба\b/g,
-    ];
-    for (const pat of ruPatterns) {
-      lower = lower.replace(pat, ' ');
-    }
-
-    const enPatterns = [
-      /\bfind\b/g,
-      /\bshow\b/g,
-      /\bcould\b/g,
-      /\bplease\b/g,
-      /\bsearch\b/g,
-      /\bme\b/g,
       /\bpictures?\b/g,
       /\bimages?\b/g,
       /\bphoto(s)?\b/g,
-      /\bof\b/g,
     ];
-    for (const pat of enPatterns) {
-      lower = lower.replace(pat, ' ');
+    for (const word of imageWords) {
+      lower = lower.replace(word, '');
     }
 
+    // Удаляем лишние пробелы и возвращаем результат
     const term = lower.trim().replace(/\s+/g, ' ');
+    console.log('Cleaned search term:', term);
     return term || text.trim();
   }
 
@@ -501,6 +498,68 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
     }
   }
 
+  const handleImageRequest = async (message: string) => {
+    try {
+      // Определяем, является ли запрос генерацией изображения
+      const isGenerationRequest = /сгенерируй|создай|generate|create/.test(message.toLowerCase());
+      
+      if (isGenerationRequest) {
+        // Извлекаем описание для генерации
+        const prompt = message
+          .replace(/сгенерируй|создай|generate|create|фото|картинк|изображен|picture|image/g, '')
+          .trim();
+
+        if (!prompt) {
+          throw new Error('Пожалуйста, укажите описание изображения');
+        }
+
+        // Отправляем запрос на генерацию
+        const response = await fetch(`${API_URL}/api/generate-image`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ prompt }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.details || 'Ошибка при генерации изображения');
+        }
+
+        const data = await response.json();
+        return {
+          type: 'image',
+          url: data.imageUrl,
+          dalleUrl: data.dalleUrl
+        };
+      } else {
+        // Поиск существующих изображений через DuckDuckGo
+        const searchTerm = message
+          .replace(/найди|покажи|можешь|пришли|искать|ищи|фото|картинк|изображен|picture|image/g, '')
+          .trim();
+
+        if (!searchTerm) {
+          throw new Error('Пожалуйста, укажите, что искать');
+        }
+
+        const response = await fetch(`${API_URL}/api/search-images?q=${encodeURIComponent(searchTerm)}`);
+        if (!response.ok) {
+          throw new Error('Ошибка при поиске изображений');
+        }
+
+        const data = await response.json();
+        return {
+          type: 'image',
+          url: data.imageUrl
+        };
+      }
+    } catch (error) {
+      console.error('Image request error:', error);
+      throw error;
+    }
+  };
+
   // ==== Логика отправки текстового сообщения или «фото-запроса» ====
   const handleSendText = useCallback(async () => {
     if (!text.trim()) {
@@ -521,28 +580,96 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
 
     // 1) Если запрос «найди фото …» → используем DuckDuckGo
     if (isImageQuery(userText)) {
+      console.log('Image query detected:', userText);
       const queryTerm = extractSearchTerm(userText);
-      const imageUrls = await searchImagesDuckDuckGo(queryTerm);
-      if (imageUrls.length === 0) {
+      console.log('Extracted search term:', queryTerm);
+      
+      if (!queryTerm || queryTerm.length < 3) {
         setMessages((prev) =>
           GiftedChat.append(prev, [
             {
               _id: Date.now() + 1,
-              text: `По запросу «${queryTerm}» ничего не найдено.`,
+              text: 'Пожалуйста, уточните, какое изображение вы ищете.',
               createdAt: new Date(),
               user: { _id: 2, name: 'Lingro' },
             },
           ])
         );
-      } else {
-        const imageMessages: Message[] = imageUrls.map((url, idx) => ({
-          _id: Date.now() + 10 + idx,
-          createdAt: new Date(),
-          user: { _id: 2, name: 'Lingro' },
-          text: '',
-          image: url,
-        }));
-        setMessages((prev) => GiftedChat.append(prev, imageMessages));
+        setIsTyping(false);
+        return;
+      }
+
+      try {
+        // Если запрос начинается с "сгенерируй" или "создай", используем DALL-E
+        if (/^сгенерируй|^создай|^generate|^create/.test(userText.toLowerCase())) {
+          console.log('Using DALL-E for generation');
+          const res = await fetch(`${API_URL}/api/file/action`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              action: 'custom',
+              prompt: userText 
+            }),
+          });
+          
+          const data = await res.json();
+          console.log('DALL-E response:', data);
+          
+          if (!res.ok) {
+            throw new Error(data.details || data.error || 'Ошибка при генерации изображения');
+          }
+          
+          if (data.imageUrl) {
+            setMessages((prev) => GiftedChat.append(prev, [{
+              _id: Date.now(),
+              createdAt: new Date(),
+              user: { _id: 2, name: 'Lingro' },
+              text: '',
+              image: data.imageUrl,
+            }]));
+          } else {
+            throw new Error('Не удалось сгенерировать изображение');
+          }
+        } else {
+          // Иначе используем DuckDuckGo для поиска
+          console.log('Using DuckDuckGo for search');
+          const imageUrls = await searchImagesDuckDuckGo(queryTerm);
+          console.log('Search results:', imageUrls);
+          
+          if (imageUrls.length === 0) {
+            setMessages((prev) =>
+              GiftedChat.append(prev, [
+                {
+                  _id: Date.now() + 1,
+                  text: `По запросу «${queryTerm}» ничего не найдено. Попробуйте изменить запрос или использовать другие ключевые слова.`,
+                  createdAt: new Date(),
+                  user: { _id: 2, name: 'Lingro' },
+                },
+              ])
+            );
+          } else {
+            const imageMessages: Message[] = imageUrls.map((url, idx) => ({
+              _id: Date.now() + 10 + idx,
+              createdAt: new Date(),
+              user: { _id: 2, name: 'Lingro' },
+              text: '',
+              image: url,
+            }));
+            setMessages((prev) => GiftedChat.append(prev, imageMessages));
+          }
+        }
+      } catch (error) {
+        console.error('Image error:', error);
+        setMessages((prev) =>
+          GiftedChat.append(prev, [
+            {
+              _id: Date.now() + 1,
+              text: error instanceof Error ? error.message : 'Произошла ошибка при обработке изображения. Пожалуйста, попробуйте позже.',
+              createdAt: new Date(),
+              user: { _id: 2, name: 'Lingro' },
+            },
+          ])
+        );
       }
       setIsTyping(false);
       return;
@@ -560,6 +687,7 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
     try {
       let reply: string | null = null;
       for (const model of [MODEL_GPT4, MODEL_FALLBACK]) {
+        console.log('Trying model:', model);
         const chatUrl = `${PROXY_URL}/api/chat`;
         const resp = await fetch(chatUrl, {
           method: 'POST',
@@ -574,12 +702,16 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
           }),
         });
         const raw = await resp.text();
-        if (!resp.ok) continue;
+        console.log('Chat response:', raw);
+        if (!resp.ok) {
+          console.error('Chat error:', resp.status, raw);
+          continue;
+        }
         const data = JSON.parse(raw);
         reply = data.choices?.[0]?.message?.content?.trim() || null;
-        break;
+        if (reply) break;
       }
-      if (!reply) throw new Error();
+      if (!reply) throw new Error('No valid response from any model');
       const botMsg: Message = {
         _id: Date.now(),
         text: reply,
@@ -587,12 +719,13 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
         user: { _id: 2, name: 'Lingro' },
       };
       setMessages((prev) => GiftedChat.append(prev, [botMsg]));
-    } catch {
+    } catch (error) {
+      console.error('Chat error:', error);
       setMessages((prev) =>
         GiftedChat.append(prev, [
           {
             _id: Date.now(),
-            text: 'Ошибка при запросе к OpenAI.',
+            text: 'Ошибка при запросе к OpenAI. Пожалуйста, попробуйте позже.',
             createdAt: new Date(),
             user: { _id: 2, name: 'Lingro' },
           },
@@ -851,9 +984,29 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
         body: JSON.stringify({ fileId, action: action === 'custom' ? 'analyze' : action, prompt }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Ошибка при обработке файла');
+      if (!res.ok) {
+        // Показываем детальное сообщение об ошибке
+        const errorMessage = data.details || data.error || 'Ошибка при обработке файла';
+        setMessages((prev) => GiftedChat.append(prev, [{
+          _id: Date.now(),
+          createdAt: new Date(),
+          user: { _id: 2, name: 'Lingro' },
+          text: errorMessage,
+        }]));
+        return;
+      }
+
       // Добавляем результат в чат
-      if (action === 'fix' && data.correctedUrl) {
+      if (data.imageUrl) {
+        // Для сгенерированных изображений
+        setMessages((prev) => GiftedChat.append(prev, [{
+          _id: Date.now(),
+          createdAt: new Date(),
+          user: { _id: 2, name: 'Lingro' },
+          text: '',
+          image: data.imageUrl,
+        }]));
+      } else if (action === 'fix' && data.correctedUrl) {
         setMessages((prev) => GiftedChat.append(prev, [{
           _id: Date.now(),
           createdAt: new Date(),
