@@ -851,9 +851,29 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
         body: JSON.stringify({ fileId, action: action === 'custom' ? 'analyze' : action, prompt }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Ошибка при обработке файла');
+      if (!res.ok) {
+        // Показываем детальное сообщение об ошибке
+        const errorMessage = data.details || data.error || 'Ошибка при обработке файла';
+        setMessages((prev) => GiftedChat.append(prev, [{
+          _id: Date.now(),
+          createdAt: new Date(),
+          user: { _id: 2, name: 'Lingro' },
+          text: errorMessage,
+        }]));
+        return;
+      }
+
       // Добавляем результат в чат
-      if (action === 'fix' && data.correctedUrl) {
+      if (data.imageUrl) {
+        // Для сгенерированных изображений
+        setMessages((prev) => GiftedChat.append(prev, [{
+          _id: Date.now(),
+          createdAt: new Date(),
+          user: { _id: 2, name: 'Lingro' },
+          text: '',
+          image: data.imageUrl,
+        }]));
+      } else if (action === 'fix' && data.correctedUrl) {
         setMessages((prev) => GiftedChat.append(prev, [{
           _id: Date.now(),
           createdAt: new Date(),
