@@ -96,23 +96,39 @@ function FileActionMenu({ visible, onClose, onAction }: { visible: boolean, onCl
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' }}>
-        <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, width: 300 }}>
-          <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>Что сделать с файлом?</Text>
-          <TouchableOpacity style={{ marginBottom: 12 }} onPress={() => { onAction('fix'); onClose(); }}><Text style={{ fontSize: 16 }}>Исправить ошибки</Text></TouchableOpacity>
-          <TouchableOpacity style={{ marginBottom: 12 }} onPress={() => { onAction('translate'); onClose(); }}><Text style={{ fontSize: 16 }}>Перевести</Text></TouchableOpacity>
-          <TouchableOpacity style={{ marginBottom: 12 }} onPress={() => { onAction('analyze'); onClose(); }}><Text style={{ fontSize: 16 }}>Анализировать</Text></TouchableOpacity>
-          <Text style={{ marginTop: 16, fontSize: 15 }}>Другое действие:</Text>
+        <View style={{ backgroundColor: '#fff', borderRadius: 24, padding: 28, width: 320, shadowColor: '#B6A4F7', shadowOpacity: 0.15, shadowRadius: 16, elevation: 8 }}>
+          <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 20, textAlign: 'center', color: '#6A0DAD' }}>Что сделать с файлом?</Text>
+          <TouchableOpacity style={styles.actionBtn} onPress={() => { onAction('fix'); onClose(); }}>
+            <LinearGradient colors={["#FF6DCB", "#6DDCFF"]} style={styles.actionGradient}>
+              <Ionicons name="build-outline" size={22} color="#fff" style={{ marginRight: 10 }} />
+              <Text style={styles.actionText}>Исправить ошибки</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionBtn} onPress={() => { onAction('translate'); onClose(); }}>
+            <LinearGradient colors={["#6DDCFF", "#B6A4F7"]} style={styles.actionGradient}>
+              <Ionicons name="language-outline" size={22} color="#fff" style={{ marginRight: 10 }} />
+              <Text style={styles.actionText}>Перевести</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionBtn} onPress={() => { onAction('analyze'); onClose(); }}>
+            <LinearGradient colors={["#B6A4F7", "#FF6DCB"]} style={styles.actionGradient}>
+              <Ionicons name="analytics-outline" size={22} color="#fff" style={{ marginRight: 10 }} />
+              <Text style={styles.actionText}>Анализировать</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+          <Text style={{ marginTop: 18, fontSize: 15, color: '#6A0DAD', fontWeight: 'bold' }}>Другое действие:</Text>
           <TextInput
-            style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 8, marginTop: 8, marginBottom: 8 }}
+            style={{ borderWidth: 1, borderColor: '#B6A4F7', borderRadius: 12, padding: 10, marginTop: 8, marginBottom: 8, fontSize: 15, backgroundColor: '#f7f7fa' }}
             placeholder="Введите команду..."
             value={customPrompt}
             onChangeText={setCustomPrompt}
+            placeholderTextColor="#B6A4F7"
           />
           <TouchableOpacity onPress={() => { if (customPrompt.trim()) { onAction('custom', customPrompt); onClose(); } }} style={{ alignSelf: 'flex-end', marginTop: 4 }}>
-            <Text style={{ color: '#6A0DAD', fontWeight: 'bold' }}>Отправить</Text>
+            <Text style={{ color: '#6A0DAD', fontWeight: 'bold', fontSize: 16 }}>Отправить</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={onClose} style={{ position: 'absolute', top: 8, right: 12 }}>
-            <Ionicons name="close" size={24} color="#888" />
+          <TouchableOpacity onPress={onClose} style={{ position: 'absolute', top: 10, right: 14 }}>
+            <Ionicons name="close" size={28} color="#B6A4F7" />
           </TouchableOpacity>
         </View>
       </View>
@@ -794,6 +810,13 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
               <Text style={{ color: '#B6A4F7', fontSize: 15, textDecorationLine: 'underline' }}>Исправленный файл</Text>
             </TouchableOpacity>
           )}
+          {/* Кнопка действия с файлом для любого типа файла */}
+          <TouchableOpacity
+            onPress={() => setFileActionMenu({ visible: true, fileId: currentMessage.file!.url.split('/').pop() })}
+            style={{ marginTop: 8 }}
+          >
+            <Text style={{ color: '#6A0DAD', fontSize: 15, textDecorationLine: 'underline' }}>Действие с файлом</Text>
+          </TouchableOpacity>
         </View>
       );
     }
@@ -1057,5 +1080,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 8,
+  },
+
+  actionBtn: {
+    marginBottom: 14,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#B6A4F7',
+    shadowOpacity: 0.10,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  actionGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    borderRadius: 16,
+  },
+  actionText: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: 'bold',
+    letterSpacing: 0.2,
   },
 });
