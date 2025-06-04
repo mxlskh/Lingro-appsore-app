@@ -2,6 +2,9 @@
 
 import 'dotenv/config';
 
+console.log('NODE_ENV:', process.env.NODE_ENV);
+console.log('BACKEND_URL_PROD:', process.env.BACKEND_URL_PROD);
+
 export default {
   expo: {
     name: "Lingro",
@@ -39,9 +42,7 @@ export default {
       MODEL_GPT4:        process.env.MODEL_GPT4,
       MODEL_FALLBACK:    process.env.MODEL_FALLBACK,
       server: {
-        url: process.env.NODE_ENV === 'production'
-          ? process.env.BACKEND_URL_PROD
-          : process.env.BACKEND_URL_DEV
+        url: process.env.BACKEND_URL_PROD // всегда Railway backend
       }
     }
   }

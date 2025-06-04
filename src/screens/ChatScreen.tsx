@@ -23,6 +23,8 @@ import {
   Linking,
   ActivityIndicator,
   Image,
+  Alert,
+  Modal,
 } from 'react-native';
 import { GiftedChat, Bubble, IMessage } from 'react-native-gifted-chat';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -34,6 +36,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as DocumentPicker from 'expo-document-picker';
+import { uploadFile, API_URL } from '../api/client';
 
 // Определяем пропсы навигатора для ChatScreen
 type ChatProps = NativeStackScreenProps<RootStackParamList, 'Chat'>;
@@ -86,6 +89,36 @@ const RECORDING_OPTIONS = {
 };
 
 const GRADIENT_COLORS: [string, string] = ['#F7B7C3', '#B6A4F7'];
+
+// Новый компонент для выбора действия над файлом
+function FileActionMenu({ visible, onClose, onAction }: { visible: boolean, onClose: () => void, onAction: (action: string, prompt?: string) => void }) {
+  const [customPrompt, setCustomPrompt] = useState('');
+  return (
+    <Modal visible={visible} transparent animationType="fade">
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' }}>
+        <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, width: 300 }}>
+          <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>Что сделать с файлом?</Text>
+          <TouchableOpacity style={{ marginBottom: 12 }} onPress={() => { onAction('fix'); onClose(); }}><Text style={{ fontSize: 16 }}>Исправить ошибки</Text></TouchableOpacity>
+          <TouchableOpacity style={{ marginBottom: 12 }} onPress={() => { onAction('translate'); onClose(); }}><Text style={{ fontSize: 16 }}>Перевести</Text></TouchableOpacity>
+          <TouchableOpacity style={{ marginBottom: 12 }} onPress={() => { onAction('analyze'); onClose(); }}><Text style={{ fontSize: 16 }}>Анализировать</Text></TouchableOpacity>
+          <Text style={{ marginTop: 16, fontSize: 15 }}>Другое действие:</Text>
+          <TextInput
+            style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 8, marginTop: 8, marginBottom: 8 }}
+            placeholder="Введите команду..."
+            value={customPrompt}
+            onChangeText={setCustomPrompt}
+          />
+          <TouchableOpacity onPress={() => { if (customPrompt.trim()) { onAction('custom', customPrompt); onClose(); } }} style={{ alignSelf: 'flex-end', marginTop: 4 }}>
+            <Text style={{ color: '#6A0DAD', fontWeight: 'bold' }}>Отправить</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={onClose} style={{ position: 'absolute', top: 8, right: 12 }}>
+            <Ionicons name="close" size={24} color="#888" />
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
 
 export default function ChatScreen({ navigation, route }: ChatProps) {
   const { colors } = useAppTheme();
@@ -589,6 +622,9 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
       const fileUri = asset.uri;
       const fileName = asset.name;
       const fileType = asset.mimeType || 'application/octet-stream';
+      // Логируем параметры
+      console.log('UPLOAD TO:', API_URL + '/api/file');
+      console.log('File params:', { uri: fileUri, name: fileName, type: fileType });
       // Показываем bubble "Загрузка файла..."
       const tempId = Date.now();
       setMessages((prev) => GiftedChat.append(prev, [{
@@ -604,20 +640,7 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
         },
       }]));
       // Отправка файла на backend
-      const formData = new FormData();
-      formData.append('file', {
-        uri: fileUri,
-        name: fileName,
-        type: fileType,
-      } as any);
-      const response = await fetch('https://openai-proxy-production-8dae.up.railway.app/api/file', {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      const data = await response.json();
+      const uploadRes = await uploadFile({ uri: fileUri, name: fileName, type: fileType });
       // Удаляем bubble "Загрузка..." и добавляем результат
       setMessages((prev) => prev.filter((m) => m._id !== tempId));
       // Основной файл
@@ -627,16 +650,16 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
         user: { _id: 1, name: 'Вы' },
         text: '',
         file: {
-          name: data.fileName || fileName,
-          url: data.url,
-          type: data.fileType || fileType,
+          name: uploadRes.fileName || fileName,
+          url: uploadRes.url,
+          type: uploadRes.fileType || fileType,
           status: 'done' as 'done',
-          correctedUrl: data.correctedUrl,
+          correctedUrl: uploadRes.correctedUrl,
         },
       };
       setMessages((prev) => GiftedChat.append(prev, [fileMsg]));
       // Исправленный файл от GPT
-      if (data.correctedUrl) {
+      if (uploadRes.correctedUrl) {
         setMessages((prev) => GiftedChat.append(prev, [{
           _id: Date.now() + 1,
           createdAt: new Date(),
@@ -644,19 +667,19 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
           text: '',
           file: {
             name: 'Исправленный файл',
-            url: data.correctedUrl,
-            type: data.fileType || fileType,
+            url: uploadRes.correctedUrl,
+            type: uploadRes.fileType || fileType,
             status: 'done' as 'done',
           },
         }]));
       }
       // Текстовый ответ от GPT
-      if (data.text) {
+      if (uploadRes.text) {
         setMessages((prev) => GiftedChat.append(prev, [{
           _id: Date.now() + 2,
           createdAt: new Date(),
           user: { _id: 2, name: 'Lingro' },
-          text: data.text,
+          text: uploadRes.text,
         }]));
       }
     } catch (e) {
@@ -794,6 +817,57 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
     );
   };
 
+  const [fileActionMenu, setFileActionMenu] = useState<{ visible: boolean, fileId?: string } | null>(null);
+
+  // Функция для отправки действия на backend
+  const handleFileAction = async (fileId: string, action: string, prompt?: string) => {
+    try {
+      const res = await fetch(`${API_URL}/api/file/action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileId, action: action === 'custom' ? 'analyze' : action, prompt }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Ошибка при обработке файла');
+      // Добавляем результат в чат
+      if (action === 'fix' && data.correctedUrl) {
+        setMessages((prev) => GiftedChat.append(prev, [{
+          _id: Date.now(),
+          createdAt: new Date(),
+          user: { _id: 2, name: 'Lingro' },
+          text: '',
+          file: { name: 'Исправленный файл', url: data.correctedUrl, type: 'text/plain', status: 'done' },
+        }]));
+      } else if (action === 'translate' && data.translatedUrl) {
+        setMessages((prev) => GiftedChat.append(prev, [{
+          _id: Date.now(),
+          createdAt: new Date(),
+          user: { _id: 2, name: 'Lingro' },
+          text: '',
+          file: { name: 'Переведённый файл', url: data.translatedUrl, type: 'text/plain', status: 'done' },
+        }]));
+      }
+      if (data.text) {
+        setMessages((prev) => GiftedChat.append(prev, [{
+          _id: Date.now() + 1,
+          createdAt: new Date(),
+          user: { _id: 2, name: 'Lingro' },
+          text: data.text,
+        }]));
+      }
+      if (data.analysis) {
+        setMessages((prev) => GiftedChat.append(prev, [{
+          _id: Date.now() + 2,
+          createdAt: new Date(),
+          user: { _id: 2, name: 'Lingro' },
+          text: data.analysis,
+        }]));
+      }
+    } catch (e: any) {
+      Alert.alert('Ошибка', e.message || 'Ошибка при обработке файла');
+    }
+  };
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -871,6 +945,11 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
           )}
         />
       </LinearGradient>
+      <FileActionMenu
+        visible={!!fileActionMenu?.visible}
+        onClose={() => setFileActionMenu(null)}
+        onAction={(action, prompt) => fileActionMenu?.fileId && handleFileAction(fileActionMenu.fileId, action, prompt)}
+      />
     </KeyboardAvoidingView>
   );
 }
