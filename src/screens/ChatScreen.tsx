@@ -521,28 +521,62 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
 
     // 1) Если запрос «найди фото …» → используем DuckDuckGo
     if (isImageQuery(userText)) {
+      console.log('Image query detected:', userText);
       const queryTerm = extractSearchTerm(userText);
-      const imageUrls = await searchImagesDuckDuckGo(queryTerm);
-      if (imageUrls.length === 0) {
+      console.log('Extracted search term:', queryTerm);
+      
+      if (!queryTerm || queryTerm.length < 3) {
         setMessages((prev) =>
           GiftedChat.append(prev, [
             {
               _id: Date.now() + 1,
-              text: `По запросу «${queryTerm}» ничего не найдено.`,
+              text: 'Пожалуйста, уточните, какое изображение вы ищете.',
               createdAt: new Date(),
               user: { _id: 2, name: 'Lingro' },
             },
           ])
         );
-      } else {
-        const imageMessages: Message[] = imageUrls.map((url, idx) => ({
-          _id: Date.now() + 10 + idx,
-          createdAt: new Date(),
-          user: { _id: 2, name: 'Lingro' },
-          text: '',
-          image: url,
-        }));
-        setMessages((prev) => GiftedChat.append(prev, imageMessages));
+        setIsTyping(false);
+        return;
+      }
+
+      try {
+        const imageUrls = await searchImagesDuckDuckGo(queryTerm);
+        console.log('Search results:', imageUrls);
+        
+        if (imageUrls.length === 0) {
+          setMessages((prev) =>
+            GiftedChat.append(prev, [
+              {
+                _id: Date.now() + 1,
+                text: `По запросу «${queryTerm}» ничего не найдено. Попробуйте изменить запрос или использовать другие ключевые слова.`,
+                createdAt: new Date(),
+                user: { _id: 2, name: 'Lingro' },
+              },
+            ])
+          );
+        } else {
+          const imageMessages: Message[] = imageUrls.map((url, idx) => ({
+            _id: Date.now() + 10 + idx,
+            createdAt: new Date(),
+            user: { _id: 2, name: 'Lingro' },
+            text: '',
+            image: url,
+          }));
+          setMessages((prev) => GiftedChat.append(prev, imageMessages));
+        }
+      } catch (error) {
+        console.error('Image search error:', error);
+        setMessages((prev) =>
+          GiftedChat.append(prev, [
+            {
+              _id: Date.now() + 1,
+              text: 'Произошла ошибка при поиске изображений. Пожалуйста, попробуйте позже.',
+              createdAt: new Date(),
+              user: { _id: 2, name: 'Lingro' },
+            },
+          ])
+        );
       }
       setIsTyping(false);
       return;
@@ -560,6 +594,7 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
     try {
       let reply: string | null = null;
       for (const model of [MODEL_GPT4, MODEL_FALLBACK]) {
+        console.log('Trying model:', model);
         const chatUrl = `${PROXY_URL}/api/chat`;
         const resp = await fetch(chatUrl, {
           method: 'POST',
@@ -574,12 +609,16 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
           }),
         });
         const raw = await resp.text();
-        if (!resp.ok) continue;
+        console.log('Chat response:', raw);
+        if (!resp.ok) {
+          console.error('Chat error:', resp.status, raw);
+          continue;
+        }
         const data = JSON.parse(raw);
         reply = data.choices?.[0]?.message?.content?.trim() || null;
-        break;
+        if (reply) break;
       }
-      if (!reply) throw new Error();
+      if (!reply) throw new Error('No valid response from any model');
       const botMsg: Message = {
         _id: Date.now(),
         text: reply,
@@ -587,12 +626,13 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
         user: { _id: 2, name: 'Lingro' },
       };
       setMessages((prev) => GiftedChat.append(prev, [botMsg]));
-    } catch {
+    } catch (error) {
+      console.error('Chat error:', error);
       setMessages((prev) =>
         GiftedChat.append(prev, [
           {
             _id: Date.now(),
-            text: 'Ошибка при запросе к OpenAI.',
+            text: 'Ошибка при запросе к OpenAI. Пожалуйста, попробуйте позже.',
             createdAt: new Date(),
             user: { _id: 2, name: 'Lingro' },
           },
