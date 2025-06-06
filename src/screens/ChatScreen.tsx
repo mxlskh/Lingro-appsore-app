@@ -559,17 +559,25 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
           throw new Error('Пожалуйста, укажите, что искать');
         }
 
-        // Поиск через DuckDuckGo на клиенте
-        const imageUrls = await searchImagesDuckDuckGo(searchTerm);
-        // alert для отладки
-        alert('DuckDuckGo results: ' + JSON.stringify(imageUrls));
-        let filteredUrls = imageUrls.filter(url => url.startsWith('https://'));
-        // Если нет ни одной https-картинки, добавляем тестовую (кубики)
-        if (filteredUrls.length === 0) {
-          filteredUrls = ['https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png'];
+        // Поиск через backend
+        const response = await fetch(`${API_URL}/api/search-images?q=${encodeURIComponent(searchTerm)}`);
+        if (!response.ok) {
+          setMessages((prev) =>
+            GiftedChat.append(prev, [
+              {
+                _id: Date.now() + 1,
+                text: 'Ошибка при поиске изображений',
+                createdAt: new Date(),
+                user: { _id: 2, name: 'Lingro' },
+              },
+            ])
+          );
+          setIsTyping(false);
+          return;
         }
-        alert('DuckDuckGo filtered results: ' + JSON.stringify(filteredUrls));
-        if (filteredUrls.length === 0) {
+        const data = await response.json();
+        const urls = Array.isArray(data.urls) ? data.urls : [];
+        if (urls.length === 0) {
           setMessages((prev) =>
             GiftedChat.append(prev, [
               {
@@ -581,7 +589,7 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
             ])
           );
         } else {
-          const imageMessages: Message[] = filteredUrls.map((url, idx) => {
+          const imageMessages: Message[] = urls.map((url: string, idx: number) => {
             return {
               _id: Date.now() + 10 + idx,
               createdAt: new Date(),
