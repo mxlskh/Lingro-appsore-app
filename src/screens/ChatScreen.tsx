@@ -505,9 +505,9 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
       const isGenerationRequest = /сгенерируй|создай|generate|create/.test(message.toLowerCase());
       
       if (isGenerationRequest) {
-        // Извлекаем описание для генерации
+        // Очищаем prompt от служебных слов
         const prompt = message
-          .replace(/сгенерируй|создай|generate|create|фото|картинк|изображен|picture|image/g, '')
+          .replace(/сгенерируй|создай|generate|create|фото|картинк|изображен|picture|image/gi, '')
           .trim();
 
         if (!prompt) {
