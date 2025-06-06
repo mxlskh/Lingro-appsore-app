@@ -421,19 +421,14 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
     const lower = text.trim().toLowerCase();
     const ruTriggers = ['фото', 'картинк', 'изображен', 'фотограф'];
     const enTriggers = ['image', 'photo', 'picture'];
-    const result = (
+    return (
       ruTriggers.some((w) => lower.includes(w)) ||
       enTriggers.some((w) => lower.includes(w))
     );
-    // Временный лог
-    alert('isImageQuery: ' + result);
-    return result;
   }
 
   function extractSearchTerm(text: string): string {
     let lower = text.trim().toLowerCase();
-
-    // Удаляем служебные слова и фразы поочерёдно
     const patterns = [
       /\bпришли фото\b/g,
       /\bнайди фото\b/g,
@@ -456,12 +451,7 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
     for (const pattern of patterns) {
       lower = lower.replace(pattern, '');
     }
-
-    // Удаляем лишние пробелы
-    const term = lower.trim().replace(/\s+/g, ' ');
-    // Временный лог
-    alert('extractSearchTerm: ' + term);
-    return term || text.trim();
+    return lower.trim().replace(/\s+/g, ' ') || text.trim();
   }
 
   async function fetchDuckDuckGoVQD(query: string): Promise<string | null> {
@@ -604,7 +594,6 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
     setText('');
     setIsTyping(true);
 
-    // 1) Если запрос «найди фото …» → используем DuckDuckGo
     if (isImageQuery(userText)) {
       const queryTerm = extractSearchTerm(userText);
       
@@ -624,7 +613,6 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
       }
 
       try {
-        // Если запрос начинается с "сгенерируй" или "создай", используем DALL-E
         if (/^сгенерируй|^создай|^generate|^create/.test(userText.toLowerCase())) {
           const res = await fetch(`${API_URL}/api/generate-image`, {
             method: 'POST',
@@ -647,16 +635,8 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
             throw new Error('Не удалось сгенерировать изображение');
           }
         } else {
-          // Иначе используем DuckDuckGo для поиска
           const imageUrls = await searchImagesDuckDuckGo(queryTerm);
-          // Временный лог
-          alert('DuckDuckGo results: ' + JSON.stringify(imageUrls));
           let filteredUrls = imageUrls.filter(url => url.startsWith('https://'));
-          // Если нет ни одной https-картинки, добавляем тестовую
-          if (filteredUrls.length === 0) {
-            filteredUrls = ['https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png'];
-          }
-          alert('DuckDuckGo filtered results: ' + JSON.stringify(filteredUrls));
           if (filteredUrls.length === 0) {
             setMessages((prev) =>
               GiftedChat.append(prev, [
@@ -697,7 +677,6 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
       return;
     }
 
-    // 2) Иначе — отправляем текст в OpenAI
     const history = [
       ...messages.map((m) => ({
         role: m.user._id === 1 ? 'user' : 'assistant',
