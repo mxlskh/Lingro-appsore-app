@@ -198,6 +198,14 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
         createdAt: new Date(),
         user: { _id: 2, name: 'Lingro' },
       },
+      // Тестовое сообщение с гарантированно рабочей картинкой
+      {
+        _id: 2,
+        text: '',
+        createdAt: new Date(),
+        user: { _id: 2, name: 'Lingro' },
+        image: 'https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png',
+      },
     ]);
     return () => {
       if (soundRef.current) {
@@ -413,46 +421,46 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
     const lower = text.trim().toLowerCase();
     const ruTriggers = ['фото', 'картинк', 'изображен', 'фотограф'];
     const enTriggers = ['image', 'photo', 'picture'];
-    return (
+    const result = (
       ruTriggers.some((w) => lower.includes(w)) ||
       enTriggers.some((w) => lower.includes(w))
     );
+    // Временный лог
+    alert('isImageQuery: ' + result);
+    return result;
   }
 
   function extractSearchTerm(text: string): string {
     let lower = text.trim().toLowerCase();
 
-    // Сначала удаляем команды поиска
-    const searchCommands = [
+    // Удаляем служебные слова и фразы поочерёдно
+    const patterns = [
+      /\bпришли фото\b/g,
+      /\bнайди фото\b/g,
+      /\bпокажи фото\b/g,
+      /\bпришли\b/g,
       /\bнайди\b/g,
       /\bпокажи\b/g,
       /\bможешь\b/g,
-      /\bпришли\b/g,
       /\bискать\b/g,
       /\bищи\b/g,
-    ];
-    for (const cmd of searchCommands) {
-      lower = lower.replace(cmd, '');
-    }
-
-    // Затем удаляем слова, связанные с изображениями
-    const imageWords = [
-      /\bизображен(ие|ий|ию|ия)?\b/g,
       /\bфото\b/g,
       /\bкартинки?\b/g,
+      /\bизображен(ие|ий|ию|ия)?\b/g,
       /\bфотограф(ию|ия)?\b/g,
       /\bпросьба\b/g,
       /\bpictures?\b/g,
       /\bimages?\b/g,
-      /\bphoto(s)?\b/g,
+      /\bphotos?\b/g,
     ];
-    for (const word of imageWords) {
-      lower = lower.replace(word, '');
+    for (const pattern of patterns) {
+      lower = lower.replace(pattern, '');
     }
 
-    // Удаляем лишние пробелы и возвращаем результат
+    // Удаляем лишние пробелы
     const term = lower.trim().replace(/\s+/g, ' ');
-    console.log('Cleaned search term:', term);
+    // Временный лог
+    alert('extractSearchTerm: ' + term);
     return term || text.trim();
   }
 
@@ -531,9 +539,24 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
         }
 
         const data = await response.json();
+        if (!data.imageUrl && !data.dalleUrl) {
+          throw new Error('Не удалось сгенерировать изображение');
+        }
+        const imageUrl = (data.dalleUrl || data.imageUrl || '').trim().replace(/;$/, '');
+        if (imageUrl) {
+          setMessages((prev) => GiftedChat.append(prev, [{
+            _id: Date.now(),
+            createdAt: new Date(),
+            user: { _id: 2, name: 'Lingro' },
+            text: '',
+            image: imageUrl,
+          }]));
+        } else {
+          throw new Error('Не удалось сгенерировать изображение');
+        }
         return {
           type: 'image',
-          url: data.imageUrl,
+          url: data.imageUrl || data.dalleUrl,
           dalleUrl: data.dalleUrl
         };
       } else {
@@ -583,9 +606,7 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
 
     // 1) Если запрос «найди фото …» → используем DuckDuckGo
     if (isImageQuery(userText)) {
-      console.log('Image query detected:', userText);
       const queryTerm = extractSearchTerm(userText);
-      console.log('Extracted search term:', queryTerm);
       
       if (!queryTerm || queryTerm.length < 3) {
         setMessages((prev) =>
@@ -605,7 +626,6 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
       try {
         // Если запрос начинается с "сгенерируй" или "создай", используем DALL-E
         if (/^сгенерируй|^создай|^generate|^create/.test(userText.toLowerCase())) {
-          console.log('Using DALL-E for generation');
           const res = await fetch(`${API_URL}/api/generate-image`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -614,28 +634,30 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
             }),
           });
           const data = await res.json();
-          console.log('DALL-E response:', data);
-          if (!res.ok) {
-            throw new Error(data.details || data.error || 'Ошибка при генерации изображения');
-          }
-          if (data.imageUrl) {
+          const imageUrl = (data.dalleUrl || data.imageUrl || '').trim().replace(/;$/, '');
+          if (imageUrl) {
             setMessages((prev) => GiftedChat.append(prev, [{
               _id: Date.now(),
               createdAt: new Date(),
               user: { _id: 2, name: 'Lingro' },
               text: '',
-              image: data.imageUrl,
+              image: imageUrl,
             }]));
           } else {
             throw new Error('Не удалось сгенерировать изображение');
           }
         } else {
           // Иначе используем DuckDuckGo для поиска
-          console.log('Using DuckDuckGo for search');
           const imageUrls = await searchImagesDuckDuckGo(queryTerm);
-          console.log('Search results:', imageUrls);
-          
-          if (imageUrls.length === 0) {
+          // Временный лог
+          alert('DuckDuckGo results: ' + JSON.stringify(imageUrls));
+          let filteredUrls = imageUrls.filter(url => url.startsWith('https://'));
+          // Если нет ни одной https-картинки, добавляем тестовую
+          if (filteredUrls.length === 0) {
+            filteredUrls = ['https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png'];
+          }
+          alert('DuckDuckGo filtered results: ' + JSON.stringify(filteredUrls));
+          if (filteredUrls.length === 0) {
             setMessages((prev) =>
               GiftedChat.append(prev, [
                 {
@@ -647,18 +669,19 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
               ])
             );
           } else {
-            const imageMessages: Message[] = imageUrls.map((url, idx) => ({
-              _id: Date.now() + 10 + idx,
-              createdAt: new Date(),
-              user: { _id: 2, name: 'Lingro' },
-              text: '',
-              image: url,
-            }));
+            const imageMessages: Message[] = filteredUrls.map((url, idx) => {
+              return {
+                _id: Date.now() + 10 + idx,
+                createdAt: new Date(),
+                user: { _id: 2, name: 'Lingro' },
+                text: '',
+                image: url,
+              };
+            });
             setMessages((prev) => GiftedChat.append(prev, imageMessages));
           }
         }
       } catch (error) {
-        console.error('Image error:', error);
         setMessages((prev) =>
           GiftedChat.append(prev, [
             {
@@ -686,7 +709,6 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
     try {
       let reply: string | null = null;
       for (const model of [MODEL_GPT4, MODEL_FALLBACK]) {
-        console.log('Trying model:', model);
         const chatUrl = `${PROXY_URL}/api/chat`;
         const resp = await fetch(chatUrl, {
           method: 'POST',
@@ -701,9 +723,7 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
           }),
         });
         const raw = await resp.text();
-        console.log('Chat response:', raw);
         if (!resp.ok) {
-          console.error('Chat error:', resp.status, raw);
           continue;
         }
         const data = JSON.parse(raw);
@@ -719,7 +739,6 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
       };
       setMessages((prev) => GiftedChat.append(prev, [botMsg]));
     } catch (error) {
-      console.error('Chat error:', error);
       setMessages((prev) =>
         GiftedChat.append(prev, [
           {
@@ -770,9 +789,6 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
       const fileUri = asset.uri;
       const fileName = asset.name;
       const fileType = asset.mimeType || 'application/octet-stream';
-      // Логируем параметры
-      console.log('UPLOAD TO:', API_URL + '/api/file');
-      console.log('File params:', { uri: fileUri, name: fileName, type: fileType });
       // Показываем bubble "Загрузка файла..."
       const tempId = Date.now();
       setMessages((prev) => GiftedChat.append(prev, [{
@@ -931,7 +947,6 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
     }
     if (currentMessage.file?.url && currentMessage.file?.name) {
       const fileId = currentMessage.file.url.split('/').pop();
-      console.log('renderBubble fileId:', fileId, currentMessage.file);
       return (
         <View style={{ backgroundColor: '#fff', borderRadius: 20, margin: 8, padding: 16, shadowColor: '#B6A4F7', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.10, shadowRadius: 8, elevation: 2, maxWidth: '75%' }}>
           <Ionicons name="document-outline" size={28} color="#B6A4F7" style={{ marginBottom: 8 }} />
@@ -947,13 +962,25 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
           {/* Кнопка действия с файлом для любого типа файла */}
           <TouchableOpacity
             onPress={() => {
-              console.log('Открытие меню действий с файлом, fileId:', fileId);
               setFileActionMenu({ visible: true, fileId });
             }}
             style={{ marginTop: 8 }}
           >
             <Text style={{ color: '#6A0DAD', fontSize: 15, textDecorationLine: 'underline' }}>Действие с файлом</Text>
           </TouchableOpacity>
+        </View>
+      );
+    }
+
+    // Если есть поле image — всегда рендерим картинку
+    if (currentMessage.image) {
+      return (
+        <View style={{ backgroundColor: '#fff', borderRadius: 20, margin: 8, padding: 8, shadowColor: '#B6A4F7', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.10, shadowRadius: 8, elevation: 2, maxWidth: '75%', alignItems: 'center' }}>
+          <Image
+            source={{ uri: currentMessage.image }}
+            style={{ width: 180, height: 120, borderRadius: 14, marginBottom: 8 }}
+            resizeMode="cover"
+          />
         </View>
       );
     }
@@ -997,7 +1024,6 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
 
   // Функция для отправки действия на backend
   const handleFileAction = async (fileId: string, action: string, prompt?: string) => {
-    console.log('handleFileAction', { fileId, action, prompt });
     setFileActionLoading(true);
     setFileActionText(
       action === 'fix'
@@ -1010,14 +1036,12 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
     );
     try {
       const url = `${API_URL}/api/file/action`;
-      console.log('fetch', url, { fileId, action, prompt });
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fileId, action: action === 'custom' ? 'analyze' : action, prompt }),
       });
       const data = await res.json();
-      console.log('file action response', data);
       if (!res.ok) {
         // Показываем детальное сообщение об ошибке
         const errorMessage = data.details || data.error || 'Ошибка при обработке файла';

@@ -2,9 +2,6 @@
 
 import 'dotenv/config';
 
-console.log('NODE_ENV:', process.env.NODE_ENV);
-console.log('BACKEND_URL_PROD:', process.env.BACKEND_URL_PROD);
-
 export default {
   expo: {
     name: "Lingro",
