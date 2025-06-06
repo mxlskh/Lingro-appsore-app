@@ -24,7 +24,7 @@ export default function GetStartedScreen({ navigation }: NativeStackScreenProps<
         <Text style={styles.title}>Начнём наше путешествие в мир языков!</Text>
         <TouchableOpacity style={styles.button} onPress={() => navigation.replace('RoleSelection')}>
           <Text style={styles.buttonText}>Давай по порядку</Text>
-        </TouchableOpacity>
+      </TouchableOpacity>
       </View>
     </LinearGradient>
   );

@@ -25,12 +25,12 @@ export default function RoleSelectionScreen({ navigation }: NativeStackScreenPro
       <View style={styles.container}>
         <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
         <Text style={styles.title}>Кто вы?</Text>
-        <View style={styles.buttonsWrapper}>
+      <View style={styles.buttonsWrapper}>
           <TouchableOpacity style={styles.button} onPress={() => onChoose('teacher')}>
-            <Text style={styles.buttonText}>Преподаватель</Text>
+          <Text style={styles.buttonText}>Преподаватель</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.button, { backgroundColor: '#F7B7C3' }]} onPress={() => onChoose('student')}>
-            <Text style={styles.buttonText}>Ученик</Text>
+          <Text style={styles.buttonText}>Ученик</Text>
           </TouchableOpacity>
         </View>
       </View>

@@ -126,9 +126,9 @@ function AppWrapper() {
 export default function App() {
   return (
     <VoiceProvider>
-      <ThemeProvider>
-        <AppWrapper />
-      </ThemeProvider>
+    <ThemeProvider>
+      <AppWrapper />
+    </ThemeProvider>
     </VoiceProvider>
   );
 }

@@ -198,7 +198,7 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
         createdAt: new Date(),
         user: { _id: 2, name: 'Lingro' },
       },
-      // Тестовое сообщение с гарантированно рабочей картинкой
+      // Тестовое сообщение с гарантированно рабочей картинкой (кубики)
       {
         _id: 2,
         text: '',
@@ -559,16 +559,39 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
           throw new Error('Пожалуйста, укажите, что искать');
         }
 
-        const response = await fetch(`${API_URL}/api/search-images?q=${encodeURIComponent(searchTerm)}`);
-        if (!response.ok) {
-          throw new Error('Ошибка при поиске изображений');
+        // Поиск через DuckDuckGo на клиенте
+        const imageUrls = await searchImagesDuckDuckGo(searchTerm);
+        // alert для отладки
+        alert('DuckDuckGo results: ' + JSON.stringify(imageUrls));
+        let filteredUrls = imageUrls.filter(url => url.startsWith('https://'));
+        // Если нет ни одной https-картинки, добавляем тестовую (кубики)
+        if (filteredUrls.length === 0) {
+          filteredUrls = ['https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png'];
         }
-
-        const data = await response.json();
-        return {
-          type: 'image',
-          url: data.imageUrl
-        };
+        alert('DuckDuckGo filtered results: ' + JSON.stringify(filteredUrls));
+        if (filteredUrls.length === 0) {
+          setMessages((prev) =>
+            GiftedChat.append(prev, [
+              {
+                _id: Date.now() + 1,
+                text: `По запросу «${searchTerm}» ничего не найдено. Попробуйте изменить запрос или использовать другие ключевые слова.`,
+                createdAt: new Date(),
+                user: { _id: 2, name: 'Lingro' },
+              },
+            ])
+          );
+        } else {
+          const imageMessages: Message[] = filteredUrls.map((url, idx) => {
+            return {
+              _id: Date.now() + 10 + idx,
+              createdAt: new Date(),
+              user: { _id: 2, name: 'Lingro' },
+              text: '',
+              image: url,
+            };
+          });
+          setMessages((prev) => GiftedChat.append(prev, imageMessages));
+        }
       }
     } catch (error) {
       console.error('Image request error:', error);

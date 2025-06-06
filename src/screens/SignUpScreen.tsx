@@ -36,26 +36,26 @@ export default function SignUpScreen({ navigation }: NativeStackScreenProps<Root
             <Text style={styles.logo}>Lingro</Text>
             <Text style={styles.title}>Новая учётная запись</Text>
             <View style={styles.form}>
-              <TextInput
+            <TextInput
                 style={styles.input}
-                placeholder="Email"
+              placeholder="Email"
                 placeholderTextColor="#B6A4F7"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-              <TextInput
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+            <TextInput
                 style={styles.input}
-                placeholder="Пароль"
+              placeholder="Пароль"
                 placeholderTextColor="#B6A4F7"
-                secureTextEntry
-                value={password}
-                onChangeText={setPassword}
-              />
+              secureTextEntry
+              value={password}
+              onChangeText={setPassword}
+            />
               <TouchableOpacity style={styles.button} onPress={() => navigation.replace('GetStarted')}>
                 <Text style={styles.buttonText}>Зарегистрироваться</Text>
-              </TouchableOpacity>
+            </TouchableOpacity>
             </View>
             <TouchableOpacity onPress={() => navigation.goBack()}>
               <Text style={styles.link}>Уже есть аккаунт? Войти</Text>

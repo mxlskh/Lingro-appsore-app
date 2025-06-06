@@ -38,23 +38,23 @@ export default function LanguageSelectionScreen({ route, navigation }: NativeSta
       <View style={styles.container}>
         <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
         <Text style={styles.title}>Выберите язык</Text>
-        <FlatList
-          data={LANGUAGES}
-          keyExtractor={item => item.code}
-          numColumns={2}
-          renderItem={({ item }) => (
-            <TouchableOpacity
+      <FlatList
+        data={LANGUAGES}
+        keyExtractor={item => item.code}
+        numColumns={2}
+        renderItem={({ item }) => (
+          <TouchableOpacity
               style={styles.card}
               onPress={() => navigation.replace('Chat', { role, language: item.code })}
               activeOpacity={0.85}
-            >
+          >
               <Text style={styles.cardText}>{item.label}</Text>
-            </TouchableOpacity>
-          )}
+          </TouchableOpacity>
+        )}
           columnWrapperStyle={{ justifyContent: 'space-between', columnGap: 16 }}
           contentContainerStyle={styles.cardsContainer}
           showsVerticalScrollIndicator={false}
-        />
+      />
       </View>
     </LinearGradient>
   );
