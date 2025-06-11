@@ -12,6 +12,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
+import { t } from '../i18n';
 
 const GRADIENT_COLORS: [string, string] = ['#F7B7C3', '#B6A4F7'];
 
@@ -21,9 +22,9 @@ export default function GetStartedScreen({ navigation }: NativeStackScreenProps<
       <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
       <View style={styles.container}>
         <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
-        <Text style={styles.title}>Начнём наше путешествие в мир языков!</Text>
-        <TouchableOpacity style={styles.button} onPress={() => navigation.replace('RoleSelection')}>
-          <Text style={styles.buttonText}>Давай по порядку</Text>
+        <Text style={styles.title}>{t('start_journey')}</Text>
+        <TouchableOpacity style={styles.button} onPress={() => navigation.replace('Personalization')}>
+          <Text style={styles.buttonText}>{t('get_started')}</Text>
       </TouchableOpacity>
       </View>
     </LinearGradient>

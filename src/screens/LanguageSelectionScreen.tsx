@@ -13,6 +13,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
+import { t } from '../i18n';
 
 const LANGUAGES = [
   { code: 'en', label: '🇺🇸/🇬🇧 Английский' },
@@ -37,7 +38,7 @@ export default function LanguageSelectionScreen({ route, navigation }: NativeSta
       <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
       <View style={styles.container}>
         <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
-        <Text style={styles.title}>Выберите язык</Text>
+        <Text style={styles.title}>{t('select_learning_language')}</Text>
       <FlatList
         data={LANGUAGES}
         keyExtractor={item => item.code}

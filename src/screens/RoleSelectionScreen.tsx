@@ -12,6 +12,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
+import { t } from '../i18n';
 
 const GRADIENT_COLORS: [string, string] = ['#F7B7C3', '#B6A4F7'];
 
@@ -24,13 +25,13 @@ export default function RoleSelectionScreen({ navigation }: NativeStackScreenPro
       <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
       <View style={styles.container}>
         <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
-        <Text style={styles.title}>Кто вы?</Text>
+        <Text style={styles.title}>{t('select_role')}</Text>
       <View style={styles.buttonsWrapper}>
           <TouchableOpacity style={styles.button} onPress={() => onChoose('teacher')}>
-          <Text style={styles.buttonText}>Преподаватель</Text>
+          <Text style={styles.buttonText}>{t('role_teacher')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.button, { backgroundColor: '#F7B7C3' }]} onPress={() => onChoose('student')}>
-          <Text style={styles.buttonText}>Ученик</Text>
+          <Text style={styles.buttonText}>{t('role_student')}</Text>
           </TouchableOpacity>
         </View>
       </View>

@@ -9,6 +9,7 @@ import SplashScreen from './src/screens/SplashScreen';
 import SignInScreen from './src/screens/SignInScreen';
 import SignUpScreen from './src/screens/SignUpScreen';
 import GetStartedScreen from './src/screens/GetStartedScreen';
+import PersonalizationScreen from './src/screens/PersonalizationScreen';
 import RoleSelectionScreen from './src/screens/RoleSelectionScreen';
 import LanguageSelectionScreen from './src/screens/LanguageSelectionScreen';
 import ChatScreen from './src/screens/ChatScreen';
@@ -24,6 +25,7 @@ export type RootStackParamList = {
   SignIn: undefined;
   SignUp: undefined;
   GetStarted: undefined;
+  Personalization: undefined;
   RoleSelection: undefined;
   LanguageSelection: { role: 'student' | 'teacher' };
   Chat: { role: 'student' | 'teacher'; language: string };
@@ -65,6 +67,13 @@ function MainNavigator() {
         <Stack.Screen
           name="GetStarted"
           component={GetStartedScreen}
+          options={{ headerShown: false }}
+        />
+
+        {/* ------------------- Personalization ------------------- */}
+        <Stack.Screen
+          name="Personalization"
+          component={PersonalizationScreen}
           options={{ headerShown: false }}
         />
 

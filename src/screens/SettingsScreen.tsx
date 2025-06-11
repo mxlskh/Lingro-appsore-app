@@ -16,6 +16,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
 import { Audio } from 'expo-av';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { t, setAppLanguage } from '../i18n';
 
 const GRADIENT_COLORS: [string, string] = ['#F7B7C3', '#B6A4F7'];
 const OPENAI_VOICES = [
@@ -25,6 +26,13 @@ const OPENAI_VOICES = [
   { id: 'onyx', label: 'Onyx' },
   { id: 'nova', label: 'Nova' },
   { id: 'shimmer', label: 'Shimmer' },
+];
+const APP_LANGUAGES = [
+  { code: 'ru', label: 'Русский' },
+  { code: 'en', label: 'English' },
+  { code: 'es', label: 'Español' },
+  { code: 'fr', label: 'Français' },
+  { code: 'de', label: 'Deutsch' },
 ];
 
 async function fetchTTS(text: string, voice: string): Promise<string | null> {
@@ -55,37 +63,52 @@ export default function SettingsScreen({ navigation, route }: NativeStackScreenP
   const [voiceModal, setVoiceModal] = useState(false);
   const [selectedVoice, setSelectedVoice] = useState('alloy');
   const [loading, setLoading] = useState(false);
+  const [appLanguage, setAppLanguageState] = useState('ru');
+  const [_, forceUpdate] = useState(0);
+
+  const handleLanguageChange = (lang: string) => {
+    setAppLanguageState(lang);
+    setAppLanguage(lang);
+    forceUpdate(x => x + 1);
+  };
 
   return (
     <LinearGradient colors={GRADIENT_COLORS} style={styles.gradient}>
       <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
       <View style={styles.container}>
         <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
-        <Text style={styles.title}>Настройки</Text>
+        <Text style={styles.title}>{t('settings')}</Text>
         <View style={styles.row}>
-          <Text style={styles.label}>Тёмная тема</Text>
+          <Text style={styles.label}>{t('dark_theme')}</Text>
           <TouchableOpacity onPress={toggleTheme} style={styles.themeSwitch}>
             <Ionicons name={isDark ? 'moon' : 'sunny'} size={22} color={isDark ? '#B6A4F7' : '#F7B7C3'} />
           </TouchableOpacity>
         </View>
         <TouchableOpacity style={styles.button} onPress={() => navigation.replace('RoleSelection')}>
-          <Text style={styles.buttonText}>Изменить роль</Text>
+          <Text style={styles.buttonText}>{t('change_role')}: {role === 'teacher' ? t('role_teacher') : t('role_student')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.button} onPress={() => navigation.replace('LanguageSelection', { role })}>
-          <Text style={styles.buttonText}>Изменить язык</Text>
+          <Text style={styles.buttonText}>{t('change_learning_language')}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.button}>
-          <Text style={styles.buttonText}>О разработчиках</Text>
-        </TouchableOpacity>
+        <View style={[styles.button, { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start' }]}> 
+          <Text style={styles.buttonText}>{t('change_app_language')}: </Text>
+          {APP_LANGUAGES.map(lang => (
+            <TouchableOpacity key={lang.code} onPress={() => handleLanguageChange(lang.code)} style={{ marginLeft: 8, marginBottom: 2 }}>
+              <Text style={{ color: appLanguage === lang.code ? '#B6A4F7' : '#6A0DAD', fontWeight: appLanguage === lang.code ? 'bold' : 'normal' }}>{lang.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
         <TouchableOpacity style={styles.button} onPress={() => setVoiceModal(true)}>
           <Ionicons name="volume-high-outline" size={22} color="#fff" style={{ marginRight: 8 }} />
-          <Text style={styles.buttonText}>Выбрать голос: {OPENAI_VOICES.find(v => v.id === selectedVoice)?.label}</Text>
+          <Text style={styles.buttonText}>{t('select_voice')}: {OPENAI_VOICES.find(v => v.id === selectedVoice)?.label}</Text>
         </TouchableOpacity>
-
+        <TouchableOpacity style={styles.button}>
+          <Text style={styles.buttonText}>{t('about')}</Text>
+        </TouchableOpacity>
         <Modal visible={voiceModal} transparent animationType="fade">
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Выберите голос ChatGPT</Text>
+              <Text style={styles.modalTitle}>{t('select_voice')}</Text>
               <FlatList
                 data={OPENAI_VOICES}
                 keyExtractor={item => item.id}
@@ -115,13 +138,13 @@ export default function SettingsScreen({ navigation, route }: NativeStackScreenP
                 }}
                 disabled={loading}
               >
-                <Text style={styles.listenButtonText}>{loading ? 'Генерируется...' : 'Прослушать'}</Text>
+                <Text style={styles.listenButtonText}>{loading ? 'Генерируется...' : t('continue')}</Text>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={styles.closeButton}
                 onPress={() => setVoiceModal(false)}
               >
-                <Text style={styles.closeButtonText}>Закрыть</Text>
+                <Text style={styles.closeButtonText}>{t('continue')}</Text>
               </TouchableOpacity>
             </View>
           </View>
