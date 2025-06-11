@@ -197,15 +197,7 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
         text: 'Привет! Я Lingro, чем могу помочь?',
         createdAt: new Date(),
         user: { _id: 2, name: 'Lingro' },
-      },
-      // Тестовое сообщение с гарантированно рабочей картинкой (кубики)
-      {
-        _id: 2,
-        text: '',
-        createdAt: new Date(),
-        user: { _id: 2, name: 'Lingro' },
-        image: 'https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png',
-      },
+      }
     ]);
     return () => {
       if (soundRef.current) {
@@ -461,8 +453,17 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
       )}&iax=images&ia=images`;
       const resp = await fetch(searchUrl, {
         headers: {
-          'User-Agent': 'Mozilla/5.0',
-          Accept: 'text/html',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9,ru;q=0.8',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'none',
+          'Sec-Fetch-User': '?1',
+          'Cache-Control': 'max-age=0'
         },
       });
       if (!resp.ok) return null;
@@ -483,8 +484,16 @@ export default function ChatScreen({ navigation, route }: ChatProps) {
       )}&vqd=${vqd}`;
       const resp = await fetch(apiUrl, {
         headers: {
-          'User-Agent': 'Mozilla/5.0',
-          Accept: 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+          'Accept': 'application/json, text/javascript, */*; q=0.01',
+          'Accept-Language': 'en-US,en;q=0.9,ru;q=0.8',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'X-Requested-With': 'XMLHttpRequest',
+          'Connection': 'keep-alive',
+          'Referer': 'https://duckduckgo.com/',
+          'Sec-Fetch-Dest': 'empty',
+          'Sec-Fetch-Mode': 'cors',
+          'Sec-Fetch-Site': 'same-origin'
         },
       });
       if (!resp.ok) throw new Error(`DuckDuckGo returned ${resp.status}`);
